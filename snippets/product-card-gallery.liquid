@@ -1,0 +1,155 @@
+{%- comment -%} Pass product, lazy_load, desktop_columns and mobile_columns. Labels follow Dawn's slideshow translations. {%- endcomment -%}
+{% liquid
+  assign images = product.metafields.custom.card_images.value | where: 'media_type', 'image'
+  assign curated = true
+  if images == blank
+    assign curated = false
+    assign images = product.images
+  endif
+  assign count = images.size | at_most: 3
+  assign loading = 'lazy'
+  if lazy_load == false
+    assign loading = 'eager'
+  endif
+  assign cols = desktop_columns | default: 4
+  assign desktop_percent = 100.0 | divided_by: cols
+%}
+{%- capture image_sizes -%}(min-width: 990px) {{ desktop_percent }}vw, calc(100vw / {{ mobile_columns | default: 2 }}){%- endcapture -%}
+{% if count > 1 or curated %}
+<catalog-card-media hidden{% if curated == false and product.featured_media.preview_image.src == images.first.src %} data-reuse-cover{% endif %}>
+  <template>
+    <product-card-gallery class="product-card-gallery">
+      <a class="product-card-gallery__link" href="{{ product.url }}" aria-label="{{ product.title | escape }}">
+        {% for item in images limit: 3 %}
+          {% assign photo = item.preview_image | default: item %}
+          {%- if forloop.first -%}
+            {{ photo | image_url: width: 1200 | image_tag: widths: '180, 360, 540, 720, 960, 1200', sizes: image_sizes, loading: loading }}
+          {%- else -%}
+            <template>{{ photo | image_url: width: 1200 | image_tag: widths: '180, 360, 540, 720, 960, 1200', sizes: image_sizes }}</template>
+          {%- endif -%}
+        {% endfor %}
+      </a>
+      {% if count > 1 %}
+        <div class="product-card-gallery__controls" hidden>
+          <button type="button" data-step="-1" aria-label="{{ 'sections.slideshow.previous_slideshow' | t | escape }}">‹</button>
+          <button type="button" data-step="1" aria-label="{{ 'sections.slideshow.next_slideshow' | t | escape }}">›</button>
+          <small aria-live="off">1 / {{ count }}</small>
+        </div>
+      {% endif %}
+    </product-card-gallery>
+  </template>
+</catalog-card-media>
+{% endif %}
+{% stylesheet %}
+.product-card-gallery,.product-card-gallery__link,.product-card-gallery__link img {display:block;width:100%;height:100%}
+.product-card-gallery {position:relative;touch-action:pan-y pinch-zoom}
+.product-card-gallery__link img {object-fit:cover}
+.product-card-gallery [hidden] {display:none!important}
+.product-card-gallery__controls {position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:space-between}
+.product-card-gallery__controls button {pointer-events:auto;width:44px;height:44px;padding:0;border:0;background:transparent;color:#202020;font:22px/1 sans-serif;cursor:pointer;position:relative;isolation:isolate}
+.product-card-gallery__controls button::before {content:'';position:absolute;inset:8px;background:#fff;border-radius:50%;z-index:-1}
+.product-card-gallery__controls small {position:absolute;bottom:.6rem;left:50%;transform:translateX(-50%);background:#fff;color:#222;padding:0 .5rem;border-radius:2rem}
+@media (hover:hover) and (pointer:fine) {
+  .product-card-gallery:not(:hover):not(:focus-within) .product-card-gallery__controls {opacity:0}
+}
+.card .card__inner .card__media:has(.product-card-gallery) {z-index:2}
+.card__inner:has(.product-card-gallery) > .card__content {z-index:3;pointer-events:none}
+.card-wrapper:has(.product-card-gallery) .card__heading a::after {content:none}
+{% endstylesheet %}
+{% javascript %}
+if (!customElements.get('product-card-gallery')) {
+  customElements.define('product-card-gallery', class extends HTMLElement {
+    connectedCallback() {
+      // Defer until children exist, including after a section redraw.
+      this.frame = requestAnimationFrame(() => this.mount());
+    }
+    disconnectedCallback() {
+      cancelAnimationFrame(this.frame);
+      this.events?.abort();
+    }
+    mount() {
+      const controls = this.querySelector('.product-card-gallery__controls');
+      if (!controls) return;
+      const link = this.querySelector('a');
+      const templates = [...link.querySelectorAll('template')];
+      link.querySelectorAll('img[data-extra-view]').forEach(img => img.remove());
+      const slides = [link.querySelector('img')];
+      const count = templates.length + 1;
+      let current = 0;
+      let start;
+      let suppressUntil = 0;
+      this.events = new AbortController();
+      const on = (el, event, fn) => el.addEventListener(event, fn, {signal:this.events.signal});
+      const show = index => {
+        index = (index + count) % count;
+        if (!slides[index]) {
+          slides[index] = templates[index - 1].content.firstElementChild.cloneNode(true);
+          slides[index].dataset.extraView = '';
+          link.append(slides[index]);
+        }
+        slides[current].hidden = true;
+        current = index;
+        slides[current].hidden = false;
+        controls.querySelector('small').textContent = (index + 1) + ' / ' + count;
+      };
+      controls.hidden = false;
+      show(0);
+      on(controls, 'click', event => {
+        const button = event.target.closest('button');
+        if (button) {
+          controls.querySelector('small').setAttribute('aria-live','polite');
+          show(current + Number(button.dataset.step));
+        }
+      });
+      on(this, 'pointerenter', event => {
+        if (event.pointerType === 'mouse' && !this.matches(':focus-within')) show(1);
+      });
+      on(this, 'pointerleave', () => { if (!this.matches(':focus-within')) show(0); });
+      on(this, 'focusout', event => { if (!this.contains(event.relatedTarget) && !this.matches(':hover')) show(0); });
+      on(link, 'pointerdown', event => {
+        if (event.pointerType === 'mouse' || !event.isPrimary) return;
+        start = {x:event.clientX, y:event.clientY, id:event.pointerId};
+        link.setPointerCapture(event.pointerId);
+      });
+      on(link, 'pointercancel', () => { start = null; });
+      on(link, 'pointerup', event => {
+        if (!start || start.id !== event.pointerId) return;
+        const dx = event.clientX - start.x, dy = event.clientY - start.y;
+        start = null;
+        if (Math.abs(dx) > 32 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+          show(current + (dx < 0 ? 1 : -1));
+          suppressUntil = performance.now() + 450;
+        }
+      });
+      on(link, 'click', event => {
+        if (event.detail && performance.now() < suppressUntil) event.preventDefault();
+      });
+    }
+  });
+}
+
+// The section places this slot beside the store's existing product card.
+// Replace only Dawn's image area so badges, prices and quick add stay native.
+if (!customElements.get('catalog-card-media')) {
+  customElements.define('catalog-card-media', class extends HTMLElement {
+    connectedCallback() {
+      this.frame = requestAnimationFrame(() => {
+        const item = this.closest('.grid__item');
+        const media = item?.querySelector('.card__inner .card__media > .media');
+        const template = this.querySelector('template');
+        if (!media || !template) return;
+        const gallery = template.content.cloneNode(true);
+        const original = media.querySelector('img');
+        if (original && this.hasAttribute('data-reuse-cover')) {
+          gallery.querySelector('img').replaceWith(original);
+        }
+        media.replaceWith(gallery);
+        this.remove();
+      });
+    }
+    disconnectedCallback() {
+      cancelAnimationFrame(this.frame);
+    }
+  });
+}
+{% endjavascript %}
