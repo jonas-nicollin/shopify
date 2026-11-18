@@ -1,0 +1,202 @@
+{% comment %} catalog:root {% endcomment %}
+<div class="catalog-grid section-{{ section.id }}-padding gradient color-{{ section.settings.color_scheme }}" data-sticky="{{ section.settings.sticky_filters }}" style="--catalog-mobile:{{ section.settings.columns_mobile }};--catalog-desktop:{{ section.settings.columns_desktop }};--catalog-tablet:{{ section.settings.columns_desktop | at_most: 2 }};--catalog-span:{{ section.settings.columns_desktop | at_most: 2 }}">
+  <catalog-filter-offset hidden></catalog-filter-offset>
+{% comment %} /catalog:root {% endcomment %}
+
+{% comment %} catalog:setup {% endcomment %}
+{% liquid
+  assign tiles = collection.metafields.custom.editorial_tiles.value
+  assign active_sort = collection.sort_by | default: collection.default_sort_by
+  assign show_tiles = true
+  if active_sort != collection.default_sort_by
+    assign show_tiles = false
+  endif
+  for filter in collection.filters
+    if filter.active_values.size > 0 or filter.min_value.value != blank or filter.max_value.value != blank
+      assign show_tiles = false
+      break
+    endif
+  endfor
+%}
+{% comment %} /catalog:setup {% endcomment %}
+
+{% comment %} catalog:tiles {% endcomment %}
+{% if show_tiles %}
+  {% assign position = paginate.current_offset | plus: forloop.index %}
+  {% if tiles == blank and position == 8 and section.settings.editorial_image != blank %}
+    <li class="catalog-grid__editorial"><picture>
+      {{ section.settings.editorial_image | image_url: width: 1600 | image_tag: widths: '360,540,720,1080,1600', sizes: '(min-width:990px) 50vw, 100vw', loading: 'lazy' }}
+    </picture></li>
+  {% endif %}
+  {% for tile in tiles %}
+    {% if tile.enabled.value == false or tile.after_product.value != position %}{% continue %}{% endif %}
+    {% assign photo = tile.image.value.preview_image | default: tile.image.value %}
+    {% if photo == blank %}{% continue %}{% endif %}
+    {% assign mobile = tile.mobile_image.value.preview_image | default: tile.mobile_image.value %}
+    {% assign title = tile.title.value %}
+    {% assign alt = tile.alt.value | default: photo.alt | default: title %}
+    <li class="catalog-grid__editorial" data-size="{{ tile.size.value | default: 'large' | escape }}" style="--mobile-position:{{ mobile.presentation.focal_point | default: photo.presentation.focal_point | default: 'center' }}">
+      {% if tile.link.value != blank %}<a href="{{ tile.link.value | escape }}" aria-label="{{ title | default: alt | escape }}">{% endif %}
+      <picture>
+        {% if mobile %}
+          <source media="(max-width:749px)" srcset="{{ mobile | image_url: width: 540 }} 540w, {{ mobile | image_url: width: 900 }} 900w" sizes="100vw">
+        {% endif %}
+        {{ photo | image_url: width: 1600 | image_tag: widths: '360,540,720,1080,1600', sizes: '(min-width:990px) 50vw, 100vw', loading: 'lazy', alt: alt }}
+      </picture>
+      {% if title != blank or tile.text.value != blank %}
+        <div class="catalog-grid__caption">
+          {% if title != blank %}<strong>{{ title | escape }}</strong>{% endif %}
+          {% if tile.text.value != blank %}<span>{{ tile.text.value | escape | newline_to_br }}</span>{% endif %}
+        </div>
+      {% endif %}
+      {% if tile.link.value != blank %}</a>{% endif %}
+    </li>
+  {% endfor %}
+{% endif %}
+{% comment %} /catalog:tiles {% endcomment %}
+
+{% comment %} catalog:pager {% endcomment %}
+{% if paginate.next %}
+  <catalog-page-loader data-section="{{ section.id }}">
+    <a class="button button--secondary" href="{{ paginate.next.url }}">{{ 'general.pagination.next' | t }}</a>
+  </catalog-page-loader>
+{% endif %}
+{% comment %} /catalog:pager {% endcomment %}
+
+{% comment %} catalog:assets {% endcomment %}
+{% stylesheet %}
+.catalog-grid .product-grid {display:grid;grid-template-columns:repeat(var(--catalog-mobile),minmax(0,1fr))}
+.catalog-grid .product-grid > li {width:auto;max-width:none;min-width:0}
+.catalog-grid .catalog-grid__editorial {position:relative;grid-column:1/-1;overflow:hidden;aspect-ratio:4/3}
+.catalog-grid__editorial picture,.catalog-grid__editorial img,.catalog-grid__editorial > a {display:block;width:100%;height:100%}
+.catalog-grid__editorial img {object-fit:cover}
+.catalog-grid__caption {position:absolute;inset:auto 0 0;padding:1.5rem;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.65))}
+.catalog-grid__caption > * {display:block}
+.catalog-grid catalog-page-loader {display:block;text-align:center;margin:2rem auto}
+@media(max-width:749px){
+  .catalog-grid__editorial img {object-position:var(--mobile-position)!important}
+  .catalog-grid:is([data-sticky="mobile"],[data-sticky="both"]) #main-collection-filters {position:sticky;top:var(--catalog-top,0px);z-index:2;background:rgb(var(--color-background))}
+}
+@media(min-width:750px){
+  .catalog-grid .product-grid {grid-template-columns:repeat(var(--catalog-tablet),minmax(0,1fr))}
+  .catalog-grid .catalog-grid__editorial {grid-column:span var(--catalog-span);grid-row:span 2;aspect-ratio:auto;min-height:200px}
+  .catalog-grid .catalog-grid__editorial picture {position:absolute;inset:0}
+  .catalog-grid .catalog-grid__editorial[data-size="single"] {grid-column:span 1;grid-row:span 1}
+  .catalog-grid:is([data-sticky="desktop"],[data-sticky="both"]) #main-collection-filters {position:sticky;top:var(--catalog-top,0px);z-index:2;background:rgb(var(--color-background));align-self:start}
+  .catalog-grid .facets-vertical #main-collection-filters {max-height:calc(100vh - var(--catalog-top,0px));overflow-y:auto}
+}
+@media(min-width:990px){.catalog-grid .product-grid {grid-template-columns:repeat(var(--catalog-desktop),minmax(0,1fr))}}
+{% endstylesheet %}
+{% javascript %}
+if (!customElements.get('catalog-filter-offset')) {
+  customElements.define('catalog-filter-offset', class extends HTMLElement {
+    connectedCallback() {
+      const grid = this.closest('.catalog-grid');
+      if (grid.dataset.sticky === 'off') return;
+      this.events = new AbortController();
+      const elements = [...document.querySelectorAll('.section-header,.announcement-bar-section,.breadcrumbs-section--sticky')];
+      const update = () => {
+        this.frame = 0;
+        let top = 0;
+        const bars = elements.map(el => ({el,rect:el.getBoundingClientRect()})).sort((a,b) => a.rect.top - b.rect.top);
+        for (const {el,rect} of bars) {
+          if (['sticky','fixed'].includes(getComputedStyle(el).position) && rect.top <= top + 1 && rect.bottom > top) top = rect.bottom;
+        }
+        grid.style.setProperty('--catalog-top', top + 'px');
+      };
+      const queue = () => { if (!this.frame) this.frame = requestAnimationFrame(update); };
+      this.resize = new ResizeObserver(queue);
+      elements.forEach(el => this.resize.observe(el));
+      for (const event of ['scroll','resize','transitionend']) window.addEventListener(event,queue,{passive:true,signal:this.events.signal});
+      update();
+    }
+    disconnectedCallback() { this.events?.abort(); this.resize?.disconnect(); cancelAnimationFrame(this.frame); this.frame = 0; }
+  });
+}
+if (!customElements.get('catalog-page-loader')) {
+  customElements.define('catalog-page-loader', class extends HTMLElement {
+    connectedCallback() {
+      this.frame = requestAnimationFrame(() => {
+        const link = this.querySelector('a');
+        if (!link || !('IntersectionObserver' in window)) return;
+        this.events = new AbortController();
+        this.watch = new IntersectionObserver(entries => {
+          if (entries.some(entry => entry.isIntersecting)) this.load(link);
+        },{rootMargin:'200px'});
+        this.watch.observe(this);
+      });
+    }
+    disconnectedCallback() { cancelAnimationFrame(this.frame); this.watch?.disconnect(); this.events?.abort(); }
+    async load(link) {
+      if (this.busy) return;
+      this.busy = true;
+      this.watch.unobserve(this);
+      try {
+        const url = new URL(link.href);
+        url.searchParams.set('section_id',this.dataset.section);
+        const result = await fetch(url,{signal:this.events.signal});
+        if (!result.ok) throw new Error('Page unavailable');
+        const page = new DOMParser().parseFromString(await result.text(),'text/html');
+        const list = page.querySelector('ul#product-grid');
+        if (!list?.children.length || !this.isConnected) return;
+        const target = this.closest('#ProductGridContainer').querySelector('ul#product-grid');
+        list.querySelectorAll('.scroll-trigger').forEach(el => el.classList.add('scroll-trigger--cancel'));
+        target.append(...Array.from(list.children));
+        const next = page.querySelector('catalog-page-loader a');
+        if (next && next.getAttribute('href') !== link.getAttribute('href')) {
+          link.setAttribute('href',next.getAttribute('href'));
+          this.watch.observe(this);
+        } else {
+          this.remove();
+        }
+      } catch { /* Keep the ordinary next-page link available for navigation. */ }
+      finally { this.busy = false; }
+    }
+  });
+}
+{% endjavascript %}
+{% comment %} /catalog:assets {% endcomment %}
+
+{% schema %}
+{
+  "name": "Product grid — Editorial",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "enable_card_gallery",
+      "label": "Card image gallery",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "sticky_filters",
+      "label": "Sticky filters",
+      "default": "desktop",
+      "options": [
+        {
+          "value": "off",
+          "label": "Off"
+        },
+        {
+          "value": "desktop",
+          "label": "Desktop"
+        },
+        {
+          "value": "mobile",
+          "label": "Mobile"
+        },
+        {
+          "value": "both",
+          "label": "Desktop and mobile"
+        }
+      ]
+    },
+    {
+      "type": "image_picker",
+      "id": "editorial_image",
+      "label": "Editorial image",
+      "info": "Shown after eight products when the collection has no editorial tiles."
+    }
+  ]
+}
+{% endschema %}
