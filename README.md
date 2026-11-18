@@ -1,5 +1,7 @@
 # Shopify
 
-Composants Shopify à installer indépendamment dans les thèmes de chaque boutique.
+Composants réutilisables pour Shopify.
 
-- [Catalogue éditorial pour Dawn](components/editorial-catalog/) — galerie de trois images, tuiles de collection et filtres sticky.
+- [Section Product grid — Editorial](components/editorial-catalog/sections/main-collection-editorial-grid.liquid)
+- [Snippet Product card gallery](components/editorial-catalog/snippets/product-card-gallery.liquid)
+- [Installation et réglages](components/editorial-catalog/README.md)

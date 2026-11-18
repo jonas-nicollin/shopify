@@ -12,7 +12,7 @@ python3 pilot.py STORE.myshopify.com THEME_ID collection.json --install
 
 Indiquer le template effectivement utilisé par la collection pilote (par exemple `collection.necklaces.json`). Le script vérifie que le thème est non publié, télécharge les fichiers, adapte la grille et la card du thème et conserve les originaux localement. Sans `--install`, il prépare seulement les fichiers. L’installation concerne les collections qui utilisent le template indiqué dans ce brouillon. Pour revenir en arrière, repasser la section du template de `main-collection-editorial-grid` à `main-collection-product-grid`.
 
-Avec un export ZIP décompressé, `python3 prepare.py dossier-du-theme dossier-de-sortie` prépare les trois fichiers Liquid hors ligne. Copier ces fichiers dans le brouillon puis remplacer le type de la grille dans son template JSON, en conservant son identifiant et ses réglages. Le fichier `editorial-grid.parts.liquid` sert à générer la section complète à partir de l’original.
+Avec un export ZIP décompressé, `python3 prepare.py dossier-du-theme dossier-de-sortie` prépare les trois fichiers Liquid hors ligne. Copier ces fichiers dans le brouillon puis remplacer le type de la grille dans son template JSON, en conservant son identifiant et ses réglages. La section complète pour Dawn 15.2.0 se trouve dans `sections/main-collection-editorial-grid.liquid`. Les repères Liquid permettent à l’installateur de reporter ses ajouts sur une grille déjà personnalisée.
 
 ## Aperçu
 

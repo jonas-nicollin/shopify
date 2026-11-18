@@ -42,7 +42,8 @@ def adapt_section(source, reference):
     # The pilot owns pagination. Remove only the audited Ajaxinate initialization.
     source = re.sub(r"{{-?\s*['\x22]ajaxinate\.min\.js['\x22]\s*\|\s*asset_url\s*\|\s*script_tag\s*-?}}", "", source)
     source = re.sub(r"<script>\s*(?:const\s+endlessCollection\s*=\s*)?new Ajaxinate\(\s*\{[^{};]*\}\s*\);?\s*</script>", "", source)
-    if "new Ajaxinate" in source or "ajaxinate.min.js" in source:
+    executable = re.sub(r"{%-?\s*comment\s*-?%}.*?{%-?\s*endcomment\s*-?%}", "", source, flags=re.S)
+    if "new Ajaxinate" in executable or "ajaxinate.min.js" in executable:
         raise ValueError("Unrecognized Ajaxinate initializer. Review before installing.")
     match = SCHEMA.search(source)
     schema = json.loads(match.group(1))
@@ -80,7 +81,7 @@ def main():
     parser.add_argument("output", type=Path, help="New directory for the three prepared theme files")
     args = parser.parse_args()
     read = lambda path: (args.theme / path).read_text(encoding="utf-8")
-    ref = (PACKAGE / "editorial-grid.parts.liquid").read_text(encoding="utf-8")
+    ref = (PACKAGE / "sections" / (GRID + ".liquid")).read_text(encoding="utf-8")
     files = {
         "sections/" + GRID + ".liquid": adapt_section(read("sections/main-collection-product-grid.liquid"), ref),
         "snippets/product-card-gallery.liquid": (PACKAGE / "snippets/product-card-gallery.liquid").read_text(encoding="utf-8"),
