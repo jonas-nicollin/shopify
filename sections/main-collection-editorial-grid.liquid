@@ -1,3 +1,14 @@
+{% comment %}
+Copyright (c) 2021-present Shopify Inc.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, sell and/or create derivative works of the Software or any part thereof, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The rights granted above may only be exercised to develop themes that integrate or interoperate with Shopify software or services, and, if applicable, to distribute, offer for sale or otherwise make available any such themes via the Shopify Theme Store.   All other uses of the Software are strictly prohibited.
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+{% endcomment %}
 {{ 'template-collection.css' | asset_url | stylesheet_tag }}
 {{ 'component-card.css' | asset_url | stylesheet_tag }}
 {{ 'component-price.css' | asset_url | stylesheet_tag }}
@@ -36,10 +47,8 @@
   }
 {%- endstyle -%}
 
-{% comment %} catalog:root {% endcomment %}
 <div class="catalog-grid section-{{ section.id }}-padding gradient color-{{ section.settings.color_scheme }}" data-sticky="{{ section.settings.sticky_filters }}" style="--catalog-mobile:{{ section.settings.columns_mobile }};--catalog-desktop:{{ section.settings.columns_desktop }};--catalog-tablet:{{ section.settings.columns_desktop | at_most: 2 }};--catalog-span:{{ section.settings.columns_desktop | at_most: 2 }}">
   <catalog-filter-offset hidden></catalog-filter-offset>
-{% comment %} /catalog:root {% endcomment %}
   {%- paginate collection.products by section.settings.products_per_page -%}
     {% comment %} Sort is the first tabbable element when filter type is vertical {% endcomment %}
     {%- if section.settings.enable_sorting and section.settings.filter_type == 'vertical' -%}
@@ -155,23 +164,27 @@
                 {% if section.settings.quick_add == 'bulk' %} collection-quick-add-bulk{% endif %}
               "
             >
-              {% assign skip_card_product_styles = false %}
-              {% comment %} catalog:setup {% endcomment %}
-{% liquid
-  assign tiles = collection.metafields.custom.editorial_tiles.value
-  assign active_sort = collection.sort_by | default: collection.default_sort_by
-  assign show_tiles = true
-  if active_sort != collection.default_sort_by
-    assign show_tiles = false
-  endif
-  for filter in collection.filters
-    if filter.active_values.size > 0 or filter.min_value.value != blank or filter.max_value.value != blank
-      assign show_tiles = false
-      break
-    endif
-  endfor
-%}
-{% comment %} /catalog:setup {% endcomment %}
+              {% liquid
+                assign skip_card_product_styles = false
+                assign secondary_hover = section.settings.show_secondary_image
+                if section.settings.enable_card_gallery
+                  assign secondary_hover = false
+                endif
+              %}
+              {% liquid
+                assign tiles = collection.metafields.custom.editorial_tiles.value
+                assign active_sort = collection.sort_by | default: collection.default_sort_by
+                assign show_tiles = true
+                if active_sort != collection.default_sort_by
+                  assign show_tiles = false
+                endif
+                for filter in collection.filters
+                  if filter.active_values.size > 0 or filter.min_value.value != blank or filter.max_value.value != blank
+                    assign show_tiles = false
+                    break
+                  endif
+                endfor
+              %}
               {%- for product in collection.products -%}
                 {% assign lazy_load = false %}
                 {%- if forloop.index > 2 -%}
@@ -186,12 +199,9 @@
                 >
                   {% render 'card-product',
                     card_product: product,
-                    enable_card_gallery: section.settings.enable_card_gallery,
-                    desktop_columns: section.settings.columns_desktop,
-                    mobile_columns: section.settings.columns_mobile,
                     media_aspect_ratio: section.settings.image_ratio,
                     image_shape: section.settings.image_shape,
-                    show_secondary_image: section.settings.show_secondary_image,
+                    show_secondary_image: secondary_hover,
                     show_vendor: section.settings.show_vendor,
                     show_rating: section.settings.show_rating,
                     lazy_load: lazy_load,
@@ -199,53 +209,56 @@
                     quick_add: section.settings.quick_add,
                     section_id: section.id
                   %}
+                  {% if section.settings.enable_card_gallery and product.images.size > 0 %}
+                    {% render 'product-card-gallery',
+                      product: product,
+                      lazy_load: lazy_load,
+                      desktop_columns: section.settings.columns_desktop,
+                      mobile_columns: section.settings.columns_mobile
+                    %}
+                  {% endif %}
                 </li>
-{% comment %} catalog:tiles {% endcomment %}
-{% if show_tiles %}
-  {% assign position = paginate.current_offset | plus: forloop.index %}
-  {% if tiles == blank and position == 8 and section.settings.editorial_image != blank %}
-    <li class="catalog-grid__editorial"><picture>
-      {{ section.settings.editorial_image | image_url: width: 1600 | image_tag: widths: '360,540,720,1080,1600', sizes: '(min-width:990px) 50vw, 100vw', loading: 'lazy' }}
-    </picture></li>
-  {% endif %}
-  {% for tile in tiles %}
-    {% if tile.enabled.value == false or tile.after_product.value != position %}{% continue %}{% endif %}
-    {% assign photo = tile.image.value.preview_image | default: tile.image.value %}
-    {% if photo == blank %}{% continue %}{% endif %}
-    {% assign mobile = tile.mobile_image.value.preview_image | default: tile.mobile_image.value %}
-    {% assign title = tile.title.value %}
-    {% assign alt = tile.alt.value | default: photo.alt | default: title %}
-    <li class="catalog-grid__editorial" data-size="{{ tile.size.value | default: 'large' | escape }}" style="--mobile-position:{{ mobile.presentation.focal_point | default: photo.presentation.focal_point | default: 'center' }}">
-      {% if tile.link.value != blank %}<a href="{{ tile.link.value | escape }}" aria-label="{{ title | default: alt | escape }}">{% endif %}
-      <picture>
-        {% if mobile %}
-          <source media="(max-width:749px)" srcset="{{ mobile | image_url: width: 540 }} 540w, {{ mobile | image_url: width: 900 }} 900w" sizes="100vw">
-        {% endif %}
-        {{ photo | image_url: width: 1600 | image_tag: widths: '360,540,720,1080,1600', sizes: '(min-width:990px) 50vw, 100vw', loading: 'lazy', alt: alt }}
-      </picture>
-      {% if title != blank or tile.text.value != blank %}
-        <div class="catalog-grid__caption">
-          {% if title != blank %}<strong>{{ title | escape }}</strong>{% endif %}
-          {% if tile.text.value != blank %}<span>{{ tile.text.value | escape | newline_to_br }}</span>{% endif %}
-        </div>
-      {% endif %}
-      {% if tile.link.value != blank %}</a>{% endif %}
-    </li>
-  {% endfor %}
-{% endif %}
-{% comment %} /catalog:tiles {% endcomment %}
+                {% if show_tiles %}
+                  {% assign position = paginate.current_offset | plus: forloop.index %}
+                  {% if tiles == blank and position == 8 and section.settings.editorial_image != blank %}
+                    <li class="catalog-grid__editorial"><picture>
+                      {{ section.settings.editorial_image | image_url: width: 1600 | image_tag: widths: '360,540,720,1080,1600', sizes: '(min-width:990px) 50vw, 100vw', loading: 'lazy' }}
+                    </picture></li>
+                  {% endif %}
+                  {% for tile in tiles %}
+                    {% if tile.enabled.value == false or tile.after_product.value != position %}{% continue %}{% endif %}
+                    {% assign photo = tile.image.value.preview_image | default: tile.image.value %}
+                    {% if photo == blank %}{% continue %}{% endif %}
+                    {% assign mobile = tile.mobile_image.value.preview_image | default: tile.mobile_image.value %}
+                    {% assign title = tile.title.value %}
+                    {% assign alt = tile.alt.value | default: photo.alt | default: title %}
+                    <li class="catalog-grid__editorial" data-size="{{ tile.size.value | default: 'large' | escape }}" style="--mobile-position:{{ mobile.presentation.focal_point | default: photo.presentation.focal_point | default: 'center' }}">
+                      {% if tile.link.value != blank %}<a href="{{ tile.link.value | escape }}" aria-label="{{ title | default: alt | escape }}">{% endif %}
+                      <picture>
+                        {% if mobile %}
+                          <source media="(max-width:749px)" srcset="{{ mobile | image_url: width: 540 }} 540w, {{ mobile | image_url: width: 900 }} 900w" sizes="100vw">
+                        {% endif %}
+                        {{ photo | image_url: width: 1600 | image_tag: widths: '360,540,720,1080,1600', sizes: '(min-width:990px) 50vw, 100vw', loading: 'lazy', alt: alt }}
+                      </picture>
+                      {% if title != blank or tile.text.value != blank %}
+                        <div class="catalog-grid__caption">
+                          {% if title != blank %}<strong>{{ title | escape }}</strong>{% endif %}
+                          {% if tile.text.value != blank %}<span>{{ tile.text.value | escape | newline_to_br }}</span>{% endif %}
+                        </div>
+                      {% endif %}
+                      {% if tile.link.value != blank %}</a>{% endif %}
+                    </li>
+                  {% endfor %}
+                {% endif %}
                 {%- assign skip_card_product_styles = true -%}
               {%- endfor -%}
             </ul>
-
-            {% comment %} catalog:pager {% endcomment %}
 {% if paginate.next %}
   <catalog-page-loader data-section="{{ section.id }}">
-    <a class="button button--secondary" href="{{ paginate.next.url }}">{{ 'general.pagination.next' | t }}</a>
+    <a class="button button--secondary" href="{{ paginate.next.url | escape }}">{{ 'general.pagination.next' | t }}</a>
   </catalog-page-loader>
 {% endif %}
-{% comment %} /catalog:pager {% endcomment %}
-          </div>
+</div>
         {%- endif -%}
       </div>
     </div>
@@ -255,10 +268,10 @@
   {%- endif -%}
 </div>
 
-{% comment %} catalog:assets {% endcomment %}
+
 {% stylesheet %}
 .catalog-grid .product-grid {display:grid;grid-template-columns:repeat(var(--catalog-mobile),minmax(0,1fr))}
-.catalog-grid .product-grid > li {width:auto;max-width:none;min-width:0}
+.catalog-grid .product-grid > li {width:auto;max-width:none;min-width:0;isolation:isolate}
 .catalog-grid .catalog-grid__editorial {position:relative;grid-column:1/-1;overflow:hidden;aspect-ratio:4/3}
 .catalog-grid__editorial picture,.catalog-grid__editorial img,.catalog-grid__editorial > a {display:block;width:100%;height:100%}
 .catalog-grid__editorial img {object-fit:cover}
@@ -347,10 +360,15 @@ if (!customElements.get('catalog-page-loader')) {
   });
 }
 {% endjavascript %}
-{% comment %} /catalog:assets {% endcomment %}
 {% schema %}
 {
   "name": "Product grid — Editorial",
+  "enabled_on": {
+    "templates": [
+      "collection"
+    ]
+  },
+  "limit": 1,
   "class": "section",
   "settings": [
     {
@@ -600,6 +618,11 @@ if (!customElements.get('catalog-page-loader')) {
       "id": "editorial_image",
       "label": "Editorial image",
       "info": "Shown after eight products when the collection has no editorial tiles."
+    }
+  ],
+  "presets": [
+    {
+      "name": "Product grid — Editorial"
     }
   ]
 }

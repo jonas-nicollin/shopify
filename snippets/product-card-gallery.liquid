@@ -1,7 +1,9 @@
 {%- comment -%} Pass product, lazy_load, desktop_columns and mobile_columns. Labels follow Dawn's slideshow translations. {%- endcomment -%}
 {% liquid
   assign images = product.metafields.custom.card_images.value | where: 'media_type', 'image'
+  assign curated = true
   if images == blank
+    assign curated = false
     assign images = product.images
   endif
   assign count = images.size | at_most: 3
@@ -13,25 +15,31 @@
   assign desktop_percent = 100.0 | divided_by: cols
 %}
 {%- capture image_sizes -%}(min-width: 990px) {{ desktop_percent }}vw, calc(100vw / {{ mobile_columns | default: 2 }}){%- endcapture -%}
-<product-card-gallery class="product-card-gallery">
-  <a class="product-card-gallery__link" href="{{ product.url }}" aria-label="{{ product.title | escape }}">
-    {% for item in images limit: 3 %}
-      {% assign photo = item.preview_image | default: item %}
-      {%- if forloop.first -%}
-        {{ photo | image_url: width: 1200 | image_tag: widths: '180, 360, 540, 720, 960, 1200', sizes: image_sizes, loading: loading }}
-      {%- else -%}
-        <template>{{ photo | image_url: width: 1200 | image_tag: widths: '180, 360, 540, 720, 960, 1200', sizes: image_sizes }}</template>
-      {%- endif -%}
-    {% endfor %}
-  </a>
-  {% if count > 1 %}
-    <div class="product-card-gallery__controls" hidden>
-      <button type="button" data-step="-1" aria-label="{{ 'sections.slideshow.previous_slideshow' | t | escape }}">‹</button>
-      <button type="button" data-step="1" aria-label="{{ 'sections.slideshow.next_slideshow' | t | escape }}">›</button>
-      <small aria-live="off">1 / {{ count }}</small>
-    </div>
-  {% endif %}
-</product-card-gallery>
+{% if count > 1 or curated %}
+<catalog-card-media hidden{% if curated == false and product.featured_media.preview_image.src == images.first.src %} data-reuse-cover{% endif %}>
+  <template>
+    <product-card-gallery class="product-card-gallery">
+      <a class="product-card-gallery__link" href="{{ product.url }}" aria-label="{{ product.title | escape }}">
+        {% for item in images limit: 3 %}
+          {% assign photo = item.preview_image | default: item %}
+          {%- if forloop.first -%}
+            {{ photo | image_url: width: 1200 | image_tag: widths: '180, 360, 540, 720, 960, 1200', sizes: image_sizes, loading: loading }}
+          {%- else -%}
+            <template>{{ photo | image_url: width: 1200 | image_tag: widths: '180, 360, 540, 720, 960, 1200', sizes: image_sizes }}</template>
+          {%- endif -%}
+        {% endfor %}
+      </a>
+      {% if count > 1 %}
+        <div class="product-card-gallery__controls" hidden>
+          <button type="button" data-step="-1" aria-label="{{ 'sections.slideshow.previous_slideshow' | t | escape }}">‹</button>
+          <button type="button" data-step="1" aria-label="{{ 'sections.slideshow.next_slideshow' | t | escape }}">›</button>
+          <small aria-live="off">1 / {{ count }}</small>
+        </div>
+      {% endif %}
+    </product-card-gallery>
+  </template>
+</catalog-card-media>
+{% endif %}
 {% stylesheet %}
 .product-card-gallery,.product-card-gallery__link,.product-card-gallery__link img {display:block;width:100%;height:100%}
 .product-card-gallery {position:relative;touch-action:pan-y pinch-zoom}
@@ -116,6 +124,31 @@ if (!customElements.get('product-card-gallery')) {
       on(link, 'click', event => {
         if (event.detail && performance.now() < suppressUntil) event.preventDefault();
       });
+    }
+  });
+}
+
+// The section places this slot beside the store's existing product card.
+// Replace only Dawn's image area so badges, prices and quick add stay native.
+if (!customElements.get('catalog-card-media')) {
+  customElements.define('catalog-card-media', class extends HTMLElement {
+    connectedCallback() {
+      this.frame = requestAnimationFrame(() => {
+        const item = this.closest('.grid__item');
+        const media = item?.querySelector('.card__inner .card__media > .media');
+        const template = this.querySelector('template');
+        if (!media || !template) return;
+        const gallery = template.content.cloneNode(true);
+        const original = media.querySelector('img');
+        if (original && this.hasAttribute('data-reuse-cover')) {
+          gallery.querySelector('img').replaceWith(original);
+        }
+        media.replaceWith(gallery);
+        this.remove();
+      });
+    }
+    disconnectedCallback() {
+      cancelAnimationFrame(this.frame);
     }
   });
 }
