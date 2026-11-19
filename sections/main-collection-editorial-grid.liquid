@@ -13,9 +13,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 {{ 'component-card.css' | asset_url | stylesheet_tag }}
 {{ 'component-price.css' | asset_url | stylesheet_tag }}
 
-{% if section.settings.image_shape == 'blob' %}
-  {{ 'mask-blobs.css' | asset_url | stylesheet_tag }}
-{%- endif -%}
 
 {%- unless section.settings.quick_add == 'none' -%}
   {{ 'quick-add.css' | asset_url | stylesheet_tag }}
@@ -93,7 +90,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                     assign editorial = true
                   endif
                   assign lazy_load = true
-                  if position < section.settings.columns_desktop
+                  if forloop.index <= section.settings.columns_desktop or section.settings.enable_lazy_load == false
                     assign lazy_load = false
                   endif
                 %}
@@ -113,8 +110,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                   {% if media != blank %}
                     <li class="catalog-grid__editorial" data-side="{{ side }}" data-product="{{ product.id }}" data-position="{{ position }}" data-catalog-item>
                       <a href="{{ product.url }}" aria-label="{{ product.title | escape }}">
-                        {% capture editorial_image %}{{ photo | image_url: width: 2000 | image_tag: widths: '360,540,720,1080,1600,2000', sizes: '(min-width:990px) 50vw, 100vw', loading: 'lazy', alt: alt }}{% endcapture %}
-                        {% if section.settings.enable_lazy_load %}{{ editorial_image | replace: ' src=', ' data-catalog-src=' | replace: ' srcset=', ' data-catalog-srcset=' }}<noscript>{{ editorial_image }}</noscript>{% else %}{{ editorial_image }}{% endif %}
+                        {% assign image_loading = 'lazy' %}{% if lazy_load == false %}{% assign image_loading = 'eager' %}{% endif %}
+                        {{ photo | image_url: width: 2000 | image_tag: widths: '360,540,720,1080,1600,2000', sizes: '(min-width:990px) 50vw, 100vw', loading: image_loading, alt: alt }}
                         {% if media.media_type == 'video' %}<template data-catalog-video>{{ media | video_tag: preload: 'none', loop: true, muted: true, playsinline: true, controls: false }}</template>{% endif %}
                       </a>
                       {% if media.media_type == 'video' %}
@@ -124,14 +121,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                   {% endif %}
                 {% endif %}
                 <li class="grid__item" data-catalog-item data-product="{{ product.id }}">
-                  {% capture card_markup %}
-                    {% render 'card-product', card_product: product, media_aspect_ratio: section.settings.image_ratio, image_shape: section.settings.image_shape, show_secondary_image: secondary_hover, show_vendor: section.settings.show_vendor, show_rating: section.settings.show_rating, lazy_load: lazy_load, skip_styles: skip_card_product_styles, quick_add: section.settings.quick_add, section_id: section.id %}
-                    {% if section.settings.enable_card_gallery and product.images.size > 0 %}{% render 'product-card-gallery', product: product, lazy_load: lazy_load, desktop_columns: section.settings.columns_desktop, mobile_columns: section.settings.columns_mobile %}{% endif %}
-                  {% endcapture %}
-                  {% if lazy_load and section.settings.enable_lazy_load %}
-                    <div class="catalog-grid__lazy-card">{{ card_markup | replace: ' src=', ' data-catalog-src=' | replace: ' srcset=', ' data-catalog-srcset=' }}</div>
-                    <noscript>{{ card_markup }}</noscript>
-                  {% else %}{{ card_markup }}{% endif %}
+                  {% render 'card-product', card_product: product, media_aspect_ratio: section.settings.image_ratio, show_secondary_image: secondary_hover, show_vendor: section.settings.show_vendor, show_rating: section.settings.show_rating, lazy_load: lazy_load, skip_styles: skip_card_product_styles, quick_add: section.settings.quick_add, section_id: section.id, enable_card_gallery: section.settings.enable_card_gallery, desktop_columns: section.settings.columns_desktop, mobile_columns: section.settings.columns_mobile %}
                 </li>
                 {% assign skip_card_product_styles = true %}
               {% endfor %}
@@ -143,9 +133,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     </div>
     <span class="visually-hidden" data-catalog-status role="status" aria-live="polite"></span>
   {% endpaginate %}
-  {% if section.settings.image_shape == 'arch' %}{{ 'mask-arch.svg' | inline_asset_content }}{% endif %}
 </editorial-catalog>
-<noscript><style>.catalog-grid__lazy-card,.catalog-grid__editorial > a > img[data-catalog-src] {display:none}</style></noscript>
 
 {% stylesheet %}
 .catalog-grid {display:block}
@@ -174,9 +162,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 .catalog-grid .product-grid {display:grid;grid-template-columns:repeat(var(--catalog-mobile),minmax(0,1fr));grid-auto-flow:row dense}
 @media(min-width:990px){.catalog-grid .product-grid {grid-template-columns:repeat(var(--catalog-desktop),minmax(0,1fr))}}
 .catalog-grid .product-grid > li {width:auto;max-width:none;min-width:0;isolation:isolate}
-.catalog-grid [data-catalog-item] {transition:opacity 800ms cubic-bezier(.2,.65,.3,1)}
-.catalog-grid [data-catalog-item][data-reveal="pending"] {opacity:0}
-.catalog-grid__lazy-card {height:100%}
+.catalog-grid img[data-catalog-reveal] {animation:catalog-media-reveal 650ms cubic-bezier(.2,.65,.3,1) both}
+@keyframes catalog-media-reveal {from {opacity:0} to {opacity:1}}
+@media(prefers-reduced-motion:reduce){.catalog-grid img[data-catalog-reveal] {animation:none}}
 .catalog-grid .catalog-grid__editorial {position:relative;grid-column:1/-1;overflow:hidden;aspect-ratio:4/3;background:rgba(var(--color-foreground),.03)}
 @media(min-width:990px){
   .catalog-grid .catalog-grid__editorial {grid-column:span var(--catalog-span);grid-row:span 2;aspect-ratio:auto;min-height:200px}
@@ -191,7 +179,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 .catalog-grid__video-toggle [hidden] {display:none}
 .catalog-grid__pagination {text-align:center;margin:2rem auto}
 .catalog-grid__pagination [aria-busy="true"] {opacity:.5;pointer-events:none}
-@media(prefers-reduced-motion:reduce){.catalog-grid [data-catalog-item],.catalog-grid #ProductGridContainer {transition:none}}
+@media(prefers-reduced-motion:reduce){.catalog-grid #ProductGridContainer {transition:none}}
 {% endstylesheet %}
 
 {% javascript %}
@@ -298,23 +286,22 @@ if (!customElements.get('editorial-catalog')) {
         const video=entry.target.querySelector('video');if(!video)return;
         if(entry.isIntersecting&&this.dataset.autoplay==='true'&&!matchMedia('(prefers-reduced-motion: reduce)').matches&&video.dataset.userPaused!=='true'&&!document.hidden)video.play().catch(()=>{});else video.pause();
       }),{threshold:.15});
-      items.forEach(item=>{item.dataset.observed='';if(this.dataset.lazy==='true'){item.dataset.reveal='pending';}observerSupported?this.mediaObserver.observe(item):this.loadMedia(item);});
+      items.forEach(item=>{
+        item.dataset.observed='';
+        // Keep Dawn's native image loading. Only animate images which finish loading later.
+        item.querySelectorAll('img').forEach(image=>{
+          if(!image.complete)image.addEventListener('load',()=>{image.dataset.catalogReveal='';},{once:true,signal:this.events.signal});
+        });
+        if(item.querySelector('[data-catalog-video]'))observerSupported?this.mediaObserver.observe(item):this.loadMedia(item);
+      });
       const link=this.querySelector('[data-catalog-next]');
       if(link&&observerSupported){
         if(!this.pageObserver)this.pageObserver=new IntersectionObserver(entries=>{if(entries.some(entry=>entry.isIntersecting))this.loadNext(this.querySelector('[data-catalog-next]'));},{rootMargin:'300px'});
         this.pageObserver.observe(link);
       }
     }
-    async loadMedia(item) {
-      const images=[...item.querySelectorAll('img')];
-      const loaded=images.map(image=>{
-        if(image.dataset.catalogSrcset){image.srcset=image.dataset.catalogSrcset;delete image.dataset.catalogSrcset;}
-        if(image.dataset.catalogSrc){image.loading='eager';image.src=image.dataset.catalogSrc;delete image.dataset.catalogSrc;}
-        return image.decode?image.decode().catch(()=>{}):Promise.resolve();
-      });
-      await Promise.race([Promise.all(loaded),new Promise(resolve=>setTimeout(resolve,1800))]);
+    loadMedia(item) {
       if(!item.isConnected)return;
-      requestAnimationFrame(()=>{item.dataset.reveal='ready';});
       const template=item.querySelector('[data-catalog-video]');
       if(template){
         const video=template.content.firstElementChild.cloneNode(true);video.muted=true;template.replaceWith(video);
@@ -389,60 +376,48 @@ if (!customElements.get('editorial-catalog')) {
       "options": [
         {
           "value": "adapt",
-          "label": "t:sections.main-collection-product-grid.settings.image_ratio.options__1.label"
-        },
-        {
-          "value": "portrait",
-          "label": "t:sections.main-collection-product-grid.settings.image_ratio.options__2.label"
+          "label": "Adapt to image"
         },
         {
           "value": "square",
-          "label": "t:sections.main-collection-product-grid.settings.image_ratio.options__3.label"
+          "label": "1:1"
+        },
+        {
+          "value": "3 / 2",
+          "label": "3:2"
+        },
+        {
+          "value": "2 / 3",
+          "label": "2:3"
+        },
+        {
+          "value": "4 / 3",
+          "label": "4:3"
+        },
+        {
+          "value": "3 / 4",
+          "label": "3:4"
+        },
+        {
+          "value": "5 / 4",
+          "label": "5:4"
+        },
+        {
+          "value": "portrait",
+          "label": "4:5"
+        },
+        {
+          "value": "16 / 9",
+          "label": "16:9"
+        },
+        {
+          "value": "9 / 16",
+          "label": "9:16"
         }
       ],
       "default": "adapt",
-      "label": "t:sections.main-collection-product-grid.settings.image_ratio.label"
-    },
-    {
-      "type": "select",
-      "id": "image_shape",
-      "options": [
-        {
-          "value": "default",
-          "label": "t:sections.all.image_shape.options__1.label"
-        },
-        {
-          "value": "arch",
-          "label": "t:sections.all.image_shape.options__2.label"
-        },
-        {
-          "value": "blob",
-          "label": "t:sections.all.image_shape.options__3.label"
-        },
-        {
-          "value": "chevronleft",
-          "label": "t:sections.all.image_shape.options__4.label"
-        },
-        {
-          "value": "chevronright",
-          "label": "t:sections.all.image_shape.options__5.label"
-        },
-        {
-          "value": "diamond",
-          "label": "t:sections.all.image_shape.options__6.label"
-        },
-        {
-          "value": "parallelogram",
-          "label": "t:sections.all.image_shape.options__7.label"
-        },
-        {
-          "value": "round",
-          "label": "t:sections.all.image_shape.options__8.label"
-        }
-      ],
-      "default": "default",
-      "label": "t:sections.all.image_shape.label",
-      "info": "t:sections.all.image_shape.info"
+      "label": "t:sections.main-collection-product-grid.settings.image_ratio.label",
+      "info": "Choose the format for product images in this section. Global card appearance stays in Theme settings."
     },
     {
       "type": "checkbox",
@@ -523,6 +498,12 @@ if (!customElements.get('editorial-catalog')) {
       "label": "t:sections.main-collection-product-grid.settings.enable_sorting.label"
     },
     {
+      "type": "checkbox",
+      "id": "show_product_count",
+      "label": "Enable product count",
+      "default": true
+    },
+    {
       "type": "header",
       "content": "t:sections.main-collection-product-grid.settings.header_mobile.content"
     },
@@ -597,22 +578,11 @@ if (!customElements.get('editorial-catalog')) {
       ]
     },
     {
-      "type": "image_picker",
-      "id": "editorial_image",
-      "label": "Legacy editorial image (unused)",
-      "info": "Preserved for migration. Editorial media now comes from the following product."
-    },
-    {
-      "type": "checkbox",
-      "id": "show_product_count",
-      "label": "Show product count",
-      "default": true
-    },
-    {
       "type": "checkbox",
       "id": "enable_lazy_load",
       "label": "Lazy load media in this section",
-      "default": true
+      "default": true,
+      "info": "Uses browser-native lazy loading, as in Dawn. The first row loads immediately."
     },
     {
       "type": "header",
@@ -621,7 +591,7 @@ if (!customElements.get('editorial-catalog')) {
     {
       "type": "checkbox",
       "id": "enable_editorial",
-      "label": "Show editorial media",
+      "label": "Enable editorial media",
       "default": true
     },
     {

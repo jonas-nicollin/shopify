@@ -1,0 +1,23 @@
+{%- comment -%}Returns a positive numeric aspect ratio. Accepts ratio (Dawn aliases or width/height) and optional media.{%- endcomment -%}
+{%- liquid
+  assign resolved = 1.0
+  case ratio
+    when 'portrait'
+      assign resolved = 0.8
+    when 'adapt'
+      assign resolved = media.aspect_ratio | default: 1.0
+    else
+      if ratio contains '/'
+        assign parts = ratio | split: '/'
+        assign numerator = parts.first | plus: 0.0
+        assign denominator = parts.last | plus: 0.0
+        if numerator > 0 and denominator > 0
+          assign resolved = numerator | divided_by: denominator
+        endif
+      endif
+  endcase
+  if resolved <= 0
+    assign resolved = 1.0
+  endif
+  echo resolved
+-%}

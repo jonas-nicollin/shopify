@@ -26,7 +26,7 @@ function pointer(w, element, name, x, y) {
 
 test('touch swipe changes images, keeps vertical scroll and prevents accidental navigation', async () => {
   const dom=environment(),w=dom.window;
-  w.document.body.innerHTML='<product-card-gallery><a href="/products/one"><img src="/one.jpg"><template><img data-catalog-src="/two.jpg"></template><template><img data-catalog-src="/three.jpg"></template></a><div class="product-card-gallery__controls"><button data-step="-1"></button><button data-step="1"></button></div></product-card-gallery>';
+  w.document.body.innerHTML='<div class="card__media"><div class="product-card-gallery__controls"><button data-step="-1"></button><button data-step="1"></button></div><product-card-gallery><a href="/products/one"><img src="/one.jpg"><template><img src="/two.jpg"></template><template><img src="/three.jpg"></template></a></product-card-gallery><div class="product-card-gallery__scrollbar" hidden><input type="range" min="1" max="3" value="1"></div></div>';
   await tick();
   const el=w.document.querySelector('product-card-gallery'),link=el.querySelector('a');
   pointer(w,link,'pointerdown',220,100);pointer(w,link,'pointerup',80,105);await tick();
@@ -38,6 +38,10 @@ test('touch swipe changes images, keeps vertical scroll and prevents accidental 
   assert.equal(el.querySelector('img.is-active').getAttribute('src'),'/two.jpg');
   el.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));await tick();assert.equal(el.querySelector('img.is-active').getAttribute('src'),'/three.jpg');
   el.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));await tick();assert.equal(el.querySelector('img.is-active').getAttribute('src'),'/one.jpg');
+  const range=w.document.querySelector('input[type=range]');range.value='3';range.dispatchEvent(new w.Event('input',{bubbles:true}));await tick();
+  assert.equal(el.querySelector('img.is-active').getAttribute('src'),'/three.jpg');
+  assert.equal(range.getAttribute('aria-valuetext'),'3 / 3');assert.equal(range.parentElement.style.getPropertyValue('--gallery-index'),'2');
+  assert.equal(range.parentElement.hidden,false);
   dom.window.close();
 });
 
@@ -52,11 +56,14 @@ test('filter requests preserve repeated facets and only submit the active deskto
   dom.window.close();
 });
 
-test('lazy media is activated by the section and filter replacement cancels an obsolete request', async () => {
+test('native image loading remains intact and filter replacement cancels an obsolete request', async () => {
   const dom=environment(),w=dom.window;
-  w.document.body.innerHTML='<editorial-catalog data-section="test"><div data-catalog-item><img data-catalog-src="/deferred.jpg"></div><span data-catalog-status></span></editorial-catalog>';
+  w.document.body.innerHTML='<editorial-catalog data-section="test"><div data-catalog-item><img src="/native.jpg" loading="lazy"></div><span data-catalog-status></span></editorial-catalog>';
   await tick();const root=w.document.querySelector('editorial-catalog');
-  assert.equal(root.querySelector('img').getAttribute('src'),'/deferred.jpg');
+  assert.equal(root.querySelector('img').getAttribute('src'),'/native.jpg');
+  assert.equal(root.querySelector('img').getAttribute('loading'),'lazy');
+  assert.equal(root.querySelector('[data-catalog-item]').hasAttribute('data-reveal'),false);
+  root.querySelector('img').dispatchEvent(new w.Event('load'));assert.equal(root.querySelector('img').hasAttribute('data-catalog-reveal'),true);
   const pending=[];root.fetchSection=(url,signal)=>new Promise(resolve=>pending.push({url,signal,resolve}));
   const first=root.renderFilters(new w.URL('https://example.com/collections/all?filter.color=red'),true);
   const second=root.renderFilters(new w.URL('https://example.com/collections/all?filter.color=blue'),true);

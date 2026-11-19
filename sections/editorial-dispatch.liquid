@@ -1,0 +1,386 @@
+{% comment %}
+  Editorial Dispatch
+  Manual image/link dispatch slider.
+{% endcomment %}
+
+{% liquid
+  assign media_ratio = section.settings.media_ratio | default: '3-4'
+%}
+
+<section
+  id="EditorialDispatch-{{ section.id }}"
+  class="editorial-dispatch color-{{ section.settings.color_scheme }}"
+  style="
+    --ed-padding-top: {{ section.settings.padding_top }}px;
+    --ed-padding-bottom: {{ section.settings.padding_bottom }}px;
+    --ed-gap: {{ section.settings.gap }}px;
+    --ed-desktop-width: {{ section.settings.desktop_width }}px;
+    --ed-mobile-width: {{ section.settings.mobile_width }}px;
+    --ed-ratio: {{ media_ratio | replace: '-', ' / ' }};
+  "
+>
+  <div class="editorial-dispatch__inner page-width">
+    {% if section.blocks.size > 0 %}
+      <div class="editorial-dispatch__slider-wrap">
+        <button class="editorial-dispatch__arrow editorial-dispatch__arrow--prev" type="button" aria-label="Previous">
+          ‹
+        </button>
+
+        <div class="editorial-dispatch__slider" data-editorial-dispatch-slider>
+          <ul class="editorial-dispatch__list" role="list">
+            {% for block in section.blocks %}
+              <li class="editorial-dispatch__item" {{ block.shopify_attributes }}>
+                {% if block.settings.link != blank %}
+                  <a href="{{ block.settings.link }}" class="editorial-dispatch__link">
+                {% else %}
+                  <div class="editorial-dispatch__link">
+                {% endif %}
+
+                  <div class="editorial-dispatch__image-wrap">
+                    {% if block.settings.image != blank %}
+  {{
+    block.settings.image
+    | image_url: width: 800
+    | image_tag:
+      loading: 'lazy',
+      widths: '120, 180, 240, 320, 440, 600, 800',
+      sizes: '(max-width: 989px) 90px, 160px',
+      class: 'editorial-dispatch__image'
+  }}
+{% else %}
+  <div class="editorial-dispatch__placeholder"></div>
+{% endif %}
+                  </div>
+
+                  {% if block.settings.title != blank %}
+                    <div class="editorial-dispatch__title">
+                      {{ block.settings.title }}
+                    </div>
+                  {% endif %}
+
+                {% if block.settings.link != blank %}
+                  </a>
+                {% else %}
+                  </div>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+
+        <button class="editorial-dispatch__arrow editorial-dispatch__arrow--next" type="button" aria-label="Next">
+          ›
+        </button>
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+<style>
+  #EditorialDispatch-{{ section.id }} {
+    padding-top: var(--ed-padding-top);
+    padding-bottom: var(--ed-padding-bottom);
+    background: rgb(var(--color-background));
+    color: rgb(var(--color-foreground));
+  }
+
+  #EditorialDispatch-{{ section.id }} .editorial-dispatch__slider-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #EditorialDispatch-{{ section.id }} .editorial-dispatch__slider {
+    position: relative;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+  }
+
+  #EditorialDispatch-{{ section.id }} .editorial-dispatch__slider::-webkit-scrollbar {
+    display: none;
+  }
+
+  #EditorialDispatch-{{ section.id }} .editorial-dispatch__list {
+    display: flex;
+    gap: var(--ed-gap);
+    align-items: flex-start;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  #EditorialDispatch-{{ section.id }} .editorial-dispatch__item {
+    flex: 0 0 var(--ed-desktop-width);
+    width: var(--ed-desktop-width);
+    text-align: center;
+  }
+
+  #EditorialDispatch-{{ section.id }} .editorial-dispatch__link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  #EditorialDispatch-{{ section.id }} .editorial-dispatch__image-wrap {
+    aspect-ratio: var(--ed-ratio);
+    overflow: hidden;
+    background: rgba(var(--color-foreground), 0.04);
+  }
+
+  #EditorialDispatch-{{ section.id }} .editorial-dispatch__image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  #EditorialDispatch-{{ section.id }} .editorial-dispatch__placeholder {
+  width: 100%;
+  height: 100%;
+  background: rgba(var(--color-foreground), 0.04);
+}
+
+  #EditorialDispatch-{{ section.id }} .editorial-dispatch__title {
+    margin-top: 1rem;
+    font-size: 1.2rem;
+    line-height: 1.25;
+  }
+
+  #EditorialDispatch-{{ section.id }} .editorial-dispatch__arrow {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: currentColor;
+    font-size: 3rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 1.2rem;
+    opacity: 0.75;
+  }
+
+  #EditorialDispatch-{{ section.id }} .editorial-dispatch__arrow:hover {
+    opacity: 1;
+  }
+
+  @media screen and (min-width: 990px) {
+    #EditorialDispatch-{{ section.id }} .editorial-dispatch__arrow {
+      display: none;
+    }
+  }
+
+  @media screen and (max-width: 989px) {
+    #EditorialDispatch-{{ section.id }} .editorial-dispatch__slider-wrap {
+      justify-content: space-between;
+    }
+
+    #EditorialDispatch-{{ section.id }} .editorial-dispatch__slider {
+      flex: 1;
+      mask-image: linear-gradient(
+        to right,
+        transparent 0,
+        black 28px,
+        black calc(100% - 28px),
+        transparent 100%
+      );
+      -webkit-mask-image: linear-gradient(
+        to right,
+        transparent 0,
+        black 28px,
+        black calc(100% - 28px),
+        transparent 100%
+      );
+    }
+
+    #EditorialDispatch-{{ section.id }} .editorial-dispatch__list {
+      justify-content: flex-start;
+      padding-inline: 1rem;
+    }
+
+    #EditorialDispatch-{{ section.id }} .editorial-dispatch__item {
+      flex: 0 0 var(--ed-mobile-width);
+      width: var(--ed-mobile-width);
+    }
+  }
+
+  @media screen and (max-width: 749px) {
+    #EditorialDispatch-{{ section.id }} .editorial-dispatch__title {
+      font-size: 1.4rem;
+    }
+
+    #EditorialDispatch-{{ section.id }} .editorial-dispatch__arrow {
+      font-size: 2.6rem;
+      padding-inline: 0.8rem;
+    }
+  }
+</style>
+
+<script>
+  (() => {
+    const section = document.getElementById('EditorialDispatch-{{ section.id }}');
+    if (!section) return;
+
+    const slider = section.querySelector('[data-editorial-dispatch-slider]');
+    const prev = section.querySelector('.editorial-dispatch__arrow--prev');
+    const next = section.querySelector('.editorial-dispatch__arrow--next');
+
+    if (!slider || !prev || !next) return;
+
+    const getStep = () => {
+      const item = section.querySelector('.editorial-dispatch__item');
+      const list = section.querySelector('.editorial-dispatch__list');
+      if (!item || !list) return 200;
+
+      const gap = parseFloat(getComputedStyle(list).gap) || 0;
+      return item.offsetWidth + gap;
+    };
+
+    prev.addEventListener('click', () => {
+      slider.scrollBy({ left: -getStep(), behavior: 'smooth' });
+    });
+
+    next.addEventListener('click', () => {
+      slider.scrollBy({ left: getStep(), behavior: 'smooth' });
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Editorial dispatch",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "select",
+      "id": "media_ratio",
+      "label": "Image ratio",
+      "default": "3-4",
+      "options": [
+        { "value": "1-1", "label": "1:1" },
+        { "value": "3-2", "label": "3:2" },
+        { "value": "2-3", "label": "2:3" },
+        { "value": "4-3", "label": "4:3" },
+        { "value": "3-4", "label": "3:4" },
+        { "value": "5-4", "label": "5:4" },
+        { "value": "4-5", "label": "4:5" },
+        { "value": "16-9", "label": "16:9" },
+        { "value": "9-16", "label": "9:16" }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "desktop_width",
+      "min": 90,
+      "max": 240,
+      "step": 10,
+      "unit": "px",
+      "label": "Desktop width",
+      "default": 150
+    },
+    {
+      "type": "range",
+      "id": "mobile_width",
+      "min": 60,
+      "max": 150,
+      "step": 10,
+      "unit": "px",
+      "label": "Mobile width",
+      "default": 90
+    },
+    {
+      "type": "range",
+      "id": "gap",
+      "min": 8,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "label": "Gap",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding top",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding bottom",
+      "default": 60
+    }
+  ],
+  "blocks": [
+    {
+      "type": "dispatch_item",
+      "name": "Dispatch item",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Image"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Title",
+          "default": "Title"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Editorial dispatch",
+      "settings": {
+        "media_ratio": "3-4"
+      },
+      "blocks": [
+        {
+          "type": "dispatch_item",
+          "settings": {
+            "image": "shopify://shop_images/placeholder.png"
+          }
+        },
+        {
+          "type": "dispatch_item",
+          "settings": {
+            "image": "shopify://shop_images/placeholder.png"
+          }
+        },
+        {
+          "type": "dispatch_item",
+          "settings": {
+            "image": "shopify://shop_images/placeholder.png"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

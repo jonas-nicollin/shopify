@@ -1,0 +1,571 @@
+{%- liquid
+  assign gift_enabled = false
+  if cart.attributes['Gift order'] == 'Yes'
+    assign gift_enabled = true
+  endif
+  assign message_enabled = false
+  if gift_enabled and cart.attributes['Gift card'] == 'Personalised'
+    assign message_enabled = true
+  endif
+  assign gift_message = cart.attributes['Gift message'] | default: ''
+-%}
+
+{%- if cart != empty -%}
+  <div
+    id="GiftOptionsSection-{{ section.id }}"
+    class="gift-options-section color-{{ section.settings.color_scheme }} gradient"
+  >
+    <div class="page-width">
+      <gift-options-form-v4
+        data-item-count="{{ cart.item_count }}"
+        data-legacy-wrapping="{{ cart.attributes['Gift wrapping'] | escape }}"
+        data-legacy-card="{{ cart.attributes['Gift card'] | escape }}"
+        data-legacy-message="{% unless message_enabled %}{{ cart.attributes['Gift message'] | escape }}{% endunless %}"
+        data-saving="Saving…"
+        data-saved="Saved"
+        data-error="Could not save"
+      >
+        <div class="gift-options__inner cart-attribute-form">
+
+          <div class="gift-options__header">
+            <h2 class="gift-options__heading h2">
+              {{ section.settings.heading | escape }}
+            </h2>
+
+            <label class="gift-options__toggle cart-attribute-form__choice">
+              <input
+                class="gift-options__checkbox"
+                type="checkbox"
+                data-gift-enabled disabled
+                aria-controls="GiftOptions-{{ section.id }}"
+                aria-expanded="{% if gift_enabled %}true{% else %}false{% endif %}"
+                {% if gift_enabled %}checked{% endif %}
+              >
+              <span>{{ section.settings.toggle_label | escape }}</span>
+            </label>
+          </div>
+
+          <div
+            id="GiftOptions-{{ section.id }}"
+            class="gift-options__body"
+            data-gift-body
+            {% unless gift_enabled %}hidden{% endunless %}
+          >
+
+            <div class="gift-options__intro">
+              {%- if section.settings.intro != blank -%}
+                <div class="rte">
+                  {{ section.settings.intro }}
+                </div>
+              {%- endif -%}
+
+              {%- if section.settings.packaging_page != blank
+                and section.settings.packaging_link_label != blank
+              -%}
+                <a
+                  href="{{ section.settings.packaging_page }}"
+                  class="gift-options__packaging-link"
+                >
+                  {%- if section.settings.packaging_image != blank -%}
+                    <span class="gift-options__packaging-media">
+                      {{
+                        section.settings.packaging_image
+                        | image_url: width: 240
+                        | image_tag:
+                          loading: 'lazy',
+                          widths: '80, 120, 160, 240',
+                          sizes: '72px',
+                          class: 'gift-options__packaging-image',
+                          alt: ''
+                      }}
+                    </span>
+                  {%- endif -%}
+
+                  <span class="gift-options__packaging-label">
+                    {{ section.settings.packaging_link_label | escape }}
+                  </span>
+
+                  <span
+                    class="gift-options__packaging-arrow"
+                    aria-hidden="true"
+                  >
+                    →
+                  </span>
+                </a>
+              {%- endif -%}
+            </div>
+
+            <div class="gift-options__message-column">
+              <label class="gift-options__choice cart-attribute-form__choice">
+                <input type="checkbox" data-message-enabled
+                  aria-controls="GiftMessageWrap-{{ section.id }}"
+                  aria-expanded="{% if message_enabled %}true{% else %}false{% endif %}"
+                  {% if message_enabled %}checked{% endif %}
+                  {% unless gift_enabled %}disabled{% endunless %}>
+                <span>Add a personalised message</span>
+              </label>
+
+              <div
+                id="GiftMessageWrap-{{ section.id }}"
+                class="gift-options__message"
+                data-message-wrap
+                {% unless message_enabled %}hidden{% endunless %}
+              >
+                <textarea
+                  id="GiftMessage-{{ section.id }}"
+                  class="gift-options__textarea cart-attribute-form__textarea"
+                  maxlength="{{ section.settings.message_max }}"
+                  placeholder="{{ section.settings.message_placeholder | escape }}"
+                  data-gift-message
+                  aria-label="Personalised message"
+                  aria-describedby="GiftMessageCount-{{ section.id }}"
+                  {% unless message_enabled %}disabled{% endunless %}
+                >{{ gift_message | escape }}</textarea>
+
+                <div class="gift-options__message-meta">
+                  <span id="GiftMessageCount-{{ section.id }}">
+                    <span data-message-count>{{ gift_message.size }}</span>
+                    / {{ section.settings.message_max }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <input
+            type="hidden"
+            name="attributes[Gift order]"
+            form="cart"
+            data-output="order"
+            value="{% if gift_enabled %}Yes{% endif %}"
+          >
+
+          <input
+            type="hidden"
+            name="attributes[Gift wrapping]"
+            form="cart"
+            data-output="wrapping"
+            value=""
+          >
+
+          <input
+            type="hidden"
+            name="attributes[Gift card]"
+            form="cart"
+            data-output="card"
+            value="{% if message_enabled %}Personalised{% endif %}"
+          >
+
+          <textarea
+            hidden
+            name="attributes[Gift message]"
+            form="cart"
+            data-output="message"
+          >{% if message_enabled %}{{ gift_message | escape }}{% endif %}</textarea>
+
+          <div class="gift-options__message-meta">
+            <span class="gift-options__status" data-save-status hidden role="status" aria-live="polite"></span>
+            <button type="button" data-retry hidden>Try again</button>
+          </div>
+          <noscript>Please enable JavaScript to change gift options.</noscript>
+        </div>
+      </gift-options-form-v4>
+    </div>
+  </div>
+
+  <style>
+    /* Reusable visual base: theme typography/colors, choices, fields and focus. */
+    #GiftOptionsSection-{{ section.id }} { --form-gap: 1rem; }
+    #GiftOptionsSection-{{ section.id }} gift-options-form-v4 { display: block; }
+    #GiftOptionsSection-{{ section.id }} .cart-attribute-form__choice { gap: var(--form-gap); }
+    #GiftOptionsSection-{{ section.id }} .cart-attribute-form :focus-visible {
+      outline: 2px solid currentColor;
+      outline-offset: 3px;
+    }
+
+    #GiftOptionsSection-{{ section.id }} {
+      padding-top: {{ section.settings.padding_top }}px;
+      padding-bottom: {{ section.settings.padding_bottom }}px;
+    }
+
+    #GiftOptionsSection-{{ section.id }} .cart-attribute-form {
+      border-top: 0.1rem solid rgba(var(--color-foreground), 0.12);
+      border-bottom: 0.1rem solid rgba(var(--color-foreground), 0.12);
+      padding: 2.4rem 0;
+    }
+
+    #GiftOptionsSection-{{ section.id }} .gift-options__header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 2rem;
+    }
+
+    #GiftOptionsSection-{{ section.id }} .gift-options__heading {
+      margin: 0;
+    }
+
+    #GiftOptionsSection-{{ section.id }} .cart-attribute-form__choice {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      cursor: pointer;
+    }
+
+    #GiftOptionsSection-{{ section.id }} input[type="checkbox"] {
+      accent-color: rgb(var(--color-foreground));
+    }
+
+    #GiftOptionsSection-{{ section.id }} .gift-options__body {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 3.2rem 6rem;
+      padding-top: 3.2rem;
+    }
+
+    #GiftOptionsSection-{{ section.id }} [hidden] {
+      display: none !important;
+    }
+
+    #GiftOptionsSection-{{ section.id }} .gift-options__intro {
+      grid-column: 1 / -1;
+      max-width: 60rem;
+    }
+
+    #GiftOptionsSection-{{ section.id }} .gift-options__packaging-link {
+      display: inline-grid;
+      grid-template-columns: auto auto auto;
+      align-items: center;
+      gap: 1.2rem;
+      margin-top: 1.8rem;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    #GiftOptionsSection-{{ section.id }} .gift-options__packaging-media {
+      display: block;
+      width: 7.2rem;
+      aspect-ratio: 1;
+      overflow: hidden;
+      background: rgba(var(--color-foreground), 0.04);
+    }
+
+    #GiftOptionsSection-{{ section.id }} .gift-options__packaging-image {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #GiftOptionsSection-{{ section.id }} .gift-options__packaging-label {
+      text-decoration: underline;
+      text-underline-offset: 0.3rem;
+    }
+
+    #GiftOptionsSection-{{ section.id }} .gift-options__packaging-arrow {
+      line-height: 1;
+    }
+
+      #GiftOptionsSection-{{ section.id }} .gift-options__message-column {
+      min-width: 0;
+      border-top: 0.1rem solid rgba(var(--color-foreground), 0.12);
+      padding-top: 1.6rem;
+    }
+
+    #GiftOptionsSection-{{ section.id }} .gift-options__message {
+      margin-top: 2.8rem;
+      max-width: 60rem;
+    }
+
+    #GiftOptionsSection-{{ section.id }} .cart-attribute-form__textarea {
+      display: block;
+      width: 100%;
+      min-height: 12rem;
+      resize: vertical;
+      box-sizing: border-box;
+    padding: 1.4rem;
+      border: 0.1rem solid rgba(var(--color-foreground), 0.3);
+      border-radius: 0;
+      background: transparent;
+      color: rgb(var(--color-foreground));
+      font: inherit;
+    }
+
+    #GiftOptionsSection-{{ section.id }} .gift-options__message-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 2rem;
+      margin-top: 0.6rem;
+      font-size: 1.2rem;
+      opacity: 0.65;
+    }
+
+    @media screen and (max-width: 749px) {
+      #GiftOptionsSection-{{ section.id }} .gift-options__header,
+      #GiftOptionsSection-{{ section.id }} .gift-options__body {
+        grid-template-columns: 1fr;
+      }
+
+      #GiftOptionsSection-{{ section.id }} .gift-options__body {
+        gap: 2.4rem;
+      }
+
+      #GiftOptionsSection-{{ section.id }} .gift-options__packaging-media {
+        width: 6.4rem;
+      }
+
+      #GiftOptionsSection-{{ section.id }} .gift-options__message {
+        margin-top: 2.4rem;
+      }
+    }
+  </style>
+
+  <script>
+    if (!customElements.get('gift-options-form-v4')) {
+      customElements.define('gift-options-form-v4', class extends HTMLElement {
+        connectedCallback() {
+          if (this.controller) return;
+          this.controller = new AbortController();
+          const options = { signal: this.controller.signal };
+          this.enabled = this.querySelector('[data-gift-enabled]');
+          this.personalised = this.querySelector('[data-message-enabled]');
+          this.message = this.querySelector('[data-gift-message]');
+          this.status = this.querySelector('[data-save-status]');
+          this.retry = this.querySelector('[data-retry]');
+          this.enabled.disabled = false;
+          this.revision = this.revision || 0;
+          this.savedRevision = this.savedRevision || 0;
+          this.addEventListener('change', (event) => {
+            if (!event.target.matches('[data-gift-enabled], [data-message-enabled]')) return;
+            if (!this.enabled.checked) this.personalised.checked = false;
+            this.update();
+            this.queueSave(0);
+          }, options);
+          this.message.addEventListener('input', () => {
+            this.update();
+            this.queueSave(400);
+          }, options);
+          this.message.addEventListener('blur', () => {
+            if (this.revision !== this.savedRevision) this.flush();
+          }, options);
+          this.retry.addEventListener('click', () => this.flush(), options);
+          // Wait for pending writes before the standard Dawn cart form submits.
+          document.addEventListener('submit', async (event) => {
+            if (event.target.id !== 'cart') return;
+            this.update();
+            if (this.revision === this.savedRevision && !this.pending) return;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            if (this.submitting) return;
+            this.submitting = true;
+            const form = event.target;
+            const submitter = event.submitter;
+            try {
+              if (await this.flush()) {
+                if (form.isConnected) form.requestSubmit(submitter && submitter.isConnected ? submitter : undefined);
+              }
+            } finally { this.submitting = false; }
+          }, { ...options, capture: true });
+          if (typeof subscribe === 'function' && typeof PUB_SUB_EVENTS !== 'undefined') {
+            this.unsubscribeCart = subscribe(PUB_SUB_EVENTS.cartUpdate, (event) => {
+              const count = event?.cartData?.item_count;
+              if (typeof count === 'number') this.closest('.gift-options-section').hidden = count === 0;
+            });
+          }
+          this.update();
+          // Clear obsolete attributes only; preserve saved gift choices and message.
+          if (this.dataset.legacyWrapping ||
+              (this.dataset.legacyCard && (!this.enabled.checked || this.dataset.legacyCard !== 'Personalised')) ||
+              this.dataset.legacyMessage) this.queueSave(0);
+        }
+        disconnectedCallback() {
+          clearTimeout(this.saveTimer);
+          // Preserve the latest edit when the theme replaces this section.
+          if (this.revision !== this.savedRevision) this.flush();
+          this.controller?.abort();
+          this.controller = null;
+          this.unsubscribeCart?.();
+        }
+        attributes() {
+          const enabled = this.enabled.checked;
+          const personalised = enabled && this.personalised.checked;
+          return {
+            'Gift order': enabled ? 'Yes' : '',
+            'Gift wrapping': '', // Migration cleanup only; no wrapping feature.
+            'Gift card': personalised ? 'Personalised' : '',
+            'Gift message': personalised ? this.message.value : ''
+          };
+        }
+        update() {
+          const enabled = this.enabled.checked;
+          const personalised = enabled && this.personalised.checked;
+          this.querySelector('[data-gift-body]').hidden = !enabled;
+          this.querySelector('[data-message-wrap]').hidden = !personalised;
+          this.personalised.disabled = !enabled;
+          this.message.disabled = !personalised;
+          this.enabled.setAttribute('aria-expanded', String(enabled));
+          this.personalised.setAttribute('aria-expanded', String(personalised));
+          this.querySelector('[data-message-count]').textContent = this.message.value.length;
+          this.renderStatus();
+          const attributes = this.attributes();
+          const keys = { order: 'Gift order', wrapping: 'Gift wrapping', card: 'Gift card', message: 'Gift message' };
+          for (const [output, key] of Object.entries(keys)) {
+            this.querySelector(`[data-output="${output}"]`).value = attributes[key];
+          }
+        }
+        renderStatus() {
+          const show = this.saveState === 'error' ||
+            (this.enabled.checked && this.personalised.checked && Boolean(this.saveState));
+          this.status.hidden = !show;
+          this.status.textContent = show ? (this.dataset[this.saveState] || '') : '';
+          this.retry.hidden = this.saveState !== 'error';
+        }
+        setStatus(state) {
+          this.saveState = state;
+          this.renderStatus();
+        }
+        queueSave(delay) {
+          this.revision += 1;
+          this.setStatus('saving');
+          this.retry.hidden = true;
+          clearTimeout(this.saveTimer);
+          this.saveTimer = setTimeout(() => this.flush(), delay);
+        }
+        async flush() {
+          clearTimeout(this.saveTimer);
+          if (this.pending) return this.pending;
+          this.pending = this.saveLatest();
+          try { return await this.pending; }
+          finally { this.pending = null; }
+        }
+        async saveLatest() {
+          try {
+            while (this.savedRevision !== this.revision) {
+              const revision = this.revision;
+              this.setStatus('saving');
+              const response = await fetch((window.Shopify?.routes?.root || '/') + 'cart/update.js', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ attributes: this.attributes() }),
+                keepalive: true
+              });
+              if (!response.ok) throw new Error('Gift options could not be saved');
+              const cart = await response.json();
+              if (!cart || !cart.attributes) throw new Error('Invalid cart response');
+              this.savedRevision = revision;
+            }
+            this.setStatus('saved');
+            this.retry.hidden = true;
+            this.dataset.legacyWrapping = '';
+            this.dataset.legacyCard = '';
+            this.dataset.legacyMessage = '';
+            return true;
+          } catch (error) {
+            this.setStatus('error');
+            this.retry.hidden = false;
+            return false;
+          }
+        }
+      });
+    }
+  </script>
+
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Gift options",
+  "tag": "section",
+  "class": "section",
+  "enabled_on": {
+    "templates": [
+      "cart"
+    ]
+  },
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Gift options"
+    },
+    {
+      "type": "text",
+      "id": "toggle_label",
+      "label": "Gift option label",
+      "default": "This is a gift"
+    },
+    {
+      "type": "richtext",
+      "id": "intro",
+      "label": "Introduction",
+      "default": "<p>Your order will be carefully packed.</p>"
+    },
+    {
+      "type": "url",
+      "id": "packaging_page",
+      "label": "Packaging page"
+    },
+    {
+      "type": "image_picker",
+      "id": "packaging_image",
+      "label": "Packaging link image"
+    },
+    {
+      "type": "text",
+      "id": "packaging_link_label",
+      "label": "Packaging link label",
+      "default": "Discover our packaging"
+    },
+    {
+      "type": "text",
+      "id": "message_placeholder",
+      "label": "Message placeholder",
+      "default": "Write your personalised message…"
+    },
+    {
+      "type": "range",
+      "id": "message_max",
+      "min": 50,
+      "max": 500,
+      "step": 25,
+      "unit": "ch",
+      "label": "Maximum message length",
+      "default": 150
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding top",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding bottom",
+      "default": 24
+    }
+  ],
+  "presets": [
+    {
+      "name": "Gift options"
+    }
+  ],
+  "limit": 1
+}
+{% endschema %}
