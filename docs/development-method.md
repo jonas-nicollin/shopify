@@ -1,43 +1,36 @@
 # Development method
 
-Decision approved on 19 November 2026: **shared Dawn product card, optional editorial collection grid**.
+## Simple default workflow
 
-## Repository boundaries
+- **Shopify** holds the working theme, merchant settings, templates and client identity. Work in an authorized draft.
+- **This GitHub repository** holds reviewed reusable modules, small host integration patches and their data/dependency contracts. Main is the source of truth for these modules.
+- **An exact backup** (theme duplicate and ZIP) preserves the current draft before migrations or Dawn upgrades. The published theme may lack recent draft work and is not an equivalent backup.
+- A private repository containing the complete client theme is optional. It helps with line-by-line history, rollback and team deployment, but is not required for the present workflow. Do not upload complete themes, merchant settings or client fonts to this public library.
 
-1. This public repository is the reusable component library. Keep section Liquid, schema, CSS and JavaScript together; use shared snippets when they have a clear reusable responsibility.
-2. A private repository per client should contain the complete theme, including templates and settings, the exact starting snapshot, and the code installed for that client. It is the deployable integration, not a second independently edited copy of the component library.
-3. Maintain a clean upstream Dawn reference at an exact release tag. Record each integration's component commit and Dawn version. Upgrade components deliberately; never overwrite client configuration with library defaults.
+Record the installed component commit and the exact Dawn version per site. Shared modules may be installed à la carte; client-specific presentation remains in the host theme. A future module update must preserve those choices rather than replace all settings with defaults.
 
-The complete-theme repository is recommended but has not been created or populated by this change. The current public component repository must not receive a wholesale client export, licensed client fonts, or merchant settings.
+## Component boundaries
 
-## Common and optional behavior
+The agreed architecture is one shared Dawn card and an optional editorial collection grid. Gallery and scrollbar switches are now global under Theme settings > Product cards; image ratios remain section-specific. The editorial grid is an enhanced main collection grid, with editorial features that can be disabled. Keep its technical filename stable to preserve current template references; a future consolidation with the native grid must explicitly migrate templates and filter/pagination behavior.
 
-`snippets/card-product.liquid` is the common card. Its `enable_card_gallery` argument defaults to false when omitted. Only the editorial collection section currently enables it, through its existing setting. Search, recommendations, native grids and featured collections keep their current behavior. The native grid remains available; keep only one collection grid active per template.
+Featured collection serves a different context: a selected collection/subset, with carousel/view-all options. It shares cards and can share layout controls without becoming the main filtered collection listing.
 
-The media ratio resolver is shared between actual and placeholder cards. Ratios and gallery/editorial activation belong to the calling section; global card appearance belongs to theme settings. Add a global default only if several sections need an explicit “inherit theme default” option. Avoid two competing controls silently overriding each other.
-
-Store-specific visual identity belongs to the private theme integration. Component selectors and names must remain generic. Do not move all custom CSS into a shared library merely because it currently lives in `base.css`.
+Keep section Liquid/schema/styles/scripts together and reusable snippets self-contained. Use Dawn's existing prices, quick add, facets, accessible drawers, icons and theme color schemes. This is a maintained Dawn extension, not a rewrite of every commerce primitive.
 
 ## Change workflow
 
-1. Read GitHub main and the actual draft before editing. Preserve merchant values and capture original files locally.
-2. Review changes and run relevant tests locally. Install only the intended files into the authorized draft.
-3. Verify the actual storefront and editor at desktop/mobile widths; test the affected feature and shared-card consumers when enabled there. Record physical-device gaps separately.
-4. Commit the reviewed source to main and check that the draft's installed files match. This manual upload workflow does not imply automatic GitHub deployment.
-5. Publish only on an explicit request. Keep a commit/tag of the exact pre-deployment theme in the private integration repository.
+1. Compare GitHub main, local changes and the actual draft. Back up touched host files and preserve merchant configuration.
+2. Prepare and review the change; validate relevant behavior locally.
+3. Install only intended files/hooks into the authorized draft. Verify desktop/mobile widths and affected shared-card callers. Distinguish responsive emulation from physical-device testing.
+4. Synchronize reviewed reusable code to GitHub main and record what is installed. This manual workflow does not imply automatic GitHub deployment.
+5. Publish only on explicit request.
 
-The currently published theme and latest upstream Dawn are useful comparison points, but neither preserves unpublished draft settings or intermediate custom work. They cannot replace an exact snapshot.
+## Dawn upgrades
 
-## Dawn updates
+Current integration target remains **Dawn 15.2.0**; no upgrade is included in this work.
 
-Current target: **Dawn 15.2.0**. Dawn **16.2.0** is available as of 19 November 2026. Test upgrades separately; no upgrade is included here.
+Shopify may carry compatible code edits into an updated theme, but conflicts require manual work. Use the updated copy as a separate draft, check Shopify's code-transfer result, and compare the [module/hook manifest](installation.md). Reinstall missing module files and reconcile the small native-file changes, preserving settings and app integration. Test the resulting whole theme before publication.
 
-- 16.0 introduces the customer-account popover and removes legacy customer-account templates/sections. Check account migration before publishing an upgraded theme.
-- 16.1.1 includes bulk quick-add / quick-order and cart fixes.
-- 16.2 adds retail stock-location information in the pickup-availability drawer.
+Neither a component library nor a complete-theme Git repository guarantees automatic upgrades. The protection is an exact backup, documented changes, and validation of the new draft. A full-theme repository adds comparison/history convenience; it does not replace those steps.
 
-These are relevant when the shop uses the affected features; they do not supply the editorial grid/gallery developed here. Review upstream changes against a clean 15.2.0 baseline, then port only the integration differences to a separate upgrade draft. Test accounts, cart, quick add, filters, product media, apps and custom sections before switching.
-
-Shopify can carry compatible code edits forward during theme updates, but conflicting customizations still need manual review. A heavily customized theme should budget for this review rather than promise automatic upgrades.
-
-Sources: [Dawn releases](https://github.com/Shopify/dawn/releases), [Dawn 16.0](https://github.com/Shopify/dawn/releases/tag/v16.0.0), [Shopify theme updates](https://help.shopify.com/en/manual/online-store/themes/managing-themes/updating-themes).
+Source: [Shopify theme updates](https://help.shopify.com/en/manual/online-store/themes/managing-themes/updating-themes).

@@ -1,0 +1,64 @@
+--- a/sections/main-product.liquid
++++ b/sections/main-product.liquid
+@@ -105,59 +105,8 @@
+                     </h2>
+                   </a>
+                 </div>
+-               {%- comment -%}
+-  ============================================================
+-  PRODUCT GROUP VARIANTS
+-  Displays visual "variants" based on Product Group metaobject.
+-  Source of truth: Products list inside the Product Group metaobject.
+-  ============================================================
+-{%- endcomment -%}
+-
+-{%- when 'product_group_variants' -%}
+-  {% assign group = product.metafields.custom.product_group.value %}
+-
+-  {% if group and group.products != blank %}
+-    <div class="product-group-variants" {{ block.shopify_attributes }}>
+-      <p class="product-group-variants__label">
+-        {{ block.settings.label | default: 'Colors' }}
+-      </p>
+-
+-      <ul class="product-group-variants__list" role="list">
+-        {% assign products = group.products.value %}
+-
+-        {% if group.sort == 'Alphabetical' %}
+-          {% assign products = products | sort: 'title' %}
+-        {% endif %}
+-
+-        {% for p in products %}
+-          <li class="product-group-variants__item">
+-            <a
+-              href="{{ p.url }}"
+-              class="product-group-variants__link {% if p.id == product.id %}is-active{% endif %}"
+-              aria-current="{% if p.id == product.id %}true{% else %}false{% endif %}"
+-              data-label="{{ p.title | escape }}"
+-            >
+-              {% if group.display == 'Image' and p.featured_image %}
+-                <img
+-                  src="{{ p.featured_image | image_url: width: 120 }}"
+-                  alt="{{ p.featured_image.alt | default: p.title | escape }}"
+-                  loading="lazy"
+-                  width="48"
+-                  height="48"
+-                >
+-              {% endif %}
+-            </a>
+-          </li>
+-        {% endfor %}
+-      </ul>
+-    </div>
+-  {% endif %}
+-
+-{%- comment -%}
+-  ============================================================
+-  END PRODUCT GROUP VARIANTS
+-  ============================================================
+-{%- endcomment -%}
++                {%- when 'product_group_variants' -%}
++                  {% render 'product-group-variants', product: product, block: block %}
+                     {%- when 'price' -%}
+                 <div id="price-{{ section.id }}" role="status" {{ block.shopify_attributes }}>
+                   {%- render 'price',

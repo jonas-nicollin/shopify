@@ -1,0 +1,14 @@
+{%- comment -%}
+  Existing badge contract: available products with custom.sub_collection = One of a kind.
+  Keep the stock/sale badge branches in card-product; this optional badge complements them.
+{%- endcomment -%}
+{%- assign sub_collection = product.metafields.custom.sub_collection.value | strip -%}
+{%- if product.available and sub_collection == 'One of a kind' -%}
+  <span class="badge badge--bottom-left badge--one-of-a-kind">One of a kind</span>
+{%- endif -%}
+{% stylesheet %}
+.card .badge.badge--one-of-a-kind {background:transparent;color:rgb(var(--color-foreground))}
+@media(max-width:749px){
+  .card--standard .card__inner .card__badge .badge.badge--one-of-a-kind {padding:0;border:unset;border-radius:unset;line-height:1;opacity:.666}
+}
+{% endstylesheet %}

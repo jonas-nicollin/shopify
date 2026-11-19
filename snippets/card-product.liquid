@@ -5,7 +5,8 @@
   Accepts:
   - card_product: {Object} Product Liquid object (optional)
   - media_aspect_ratio: {String} "adapt", "square", "portrait", or a positive width/height fraction, e.g. "3 / 2".
-  - enable_card_gallery: {Boolean} Opt into the shared gallery. Default: false.
+  - enable_card_gallery: {Boolean} Legacy fallback when global card settings are not installed.
+    The card_gallery_enabled theme setting controls the shared gallery across sections.
   - desktop_columns, mobile_columns: {Number} Responsive gallery image sizing.
   - image_shape: {String} Image mask to apply to the product image card. Values are "arch", "blob", "chevronleft", "chevronright", "diamond", "parallelogram", and "round". (optional)
   - show_secondary_image: {Boolean} Show the secondary image on hover. Default: false (optional)
@@ -31,16 +32,15 @@
   {{ 'quick-order-list.css' | asset_url | stylesheet_tag }}
   {{ 'quantity-popover.css' | asset_url | stylesheet_tag }}
 {%- endunless -%}
+{%- liquid
+  if settings.card_gallery_enabled != nil
+    assign enable_card_gallery = settings.card_gallery_enabled
+  endif
+-%}
 {%- if card_product and card_product != empty -%}
   {%- capture ratio -%}{% render 'media-aspect-ratio', ratio: media_aspect_ratio, media: card_product.featured_media %}{%- endcapture -%}
   {%- liquid
     assign ratio = ratio | strip | plus: 0.0
-    assign is_one_of_a_kind = false
-assign sub_collection = card_product.metafields.custom.sub_collection.value | strip
-
-if sub_collection == 'One of a kind'
-  assign is_one_of_a_kind = true
-endif
   -%}
   <div class="card-wrapper product-card-wrapper underline-links-hover">
     <div
@@ -132,11 +132,7 @@ endif
             </h3>
           </div>
           <div class="card__badge {{ settings.badge_position }}">
-            {%- if is_one_of_a_kind and card_product.available -%}
-              <span class="badge badge--bottom-left badge--one-of-a-kind">
-                One of a kind
-              </span>
-            {%- endif -%}
+            {% render 'product-badge-one-of-a-kind', product: card_product %}
 
             {%- if card_product.available == false -%}
               <span
@@ -562,11 +558,7 @@ endif
           {% endif %}
         {% endif %}
         <div class="card__badge {{ settings.badge_position }}">
-          {%- if is_one_of_a_kind and card_product.available -%}
-            <span class="badge badge--bottom-left badge--one-of-a-kind">
-              One of a kind
-            </span>
-          {%- endif -%}
+          {% render 'product-badge-one-of-a-kind', product: card_product %}
 
           {%- if card_product.available == false -%}
             <span

@@ -29,7 +29,9 @@ test('touch swipe changes images, keeps vertical scroll and prevents accidental 
   w.document.body.innerHTML='<div class="card__media"><div class="product-card-gallery__controls"><button data-step="-1"></button><button data-step="1"></button></div><product-card-gallery><a href="/products/one"><img src="/one.jpg"><template><img src="/two.jpg"></template><template><img src="/three.jpg"></template></a></product-card-gallery><div class="product-card-gallery__scrollbar" hidden><input type="range" min="1" max="3" value="1"></div></div>';
   await tick();
   const el=w.document.querySelector('product-card-gallery'),link=el.querySelector('a');
+  assert.equal(el.hasAttribute('data-gallery-interacting'),false);
   pointer(w,link,'pointerdown',220,100);pointer(w,link,'pointerup',80,105);await tick();
+  assert.equal(el.hasAttribute('data-gallery-interacting'),true);
   assert.equal(el.querySelector('img.is-active').getAttribute('src'),'/two.jpg');
   const click=new w.MouseEvent('click',{bubbles:true,cancelable:true,detail:1});link.dispatchEvent(click);assert.equal(click.defaultPrevented,true);
   pointer(w,link,'pointerdown',220,100);pointer(w,link,'pointerup',210,230);await tick();
@@ -42,6 +44,36 @@ test('touch swipe changes images, keeps vertical scroll and prevents accidental 
   assert.equal(el.querySelector('img.is-active').getAttribute('src'),'/three.jpg');
   assert.equal(range.getAttribute('aria-valuetext'),'3 / 3');assert.equal(range.parentElement.style.getPropertyValue('--gallery-index'),'2');
   assert.equal(range.parentElement.hidden,false);
+  await new Promise(resolve=>setTimeout(resolve,1450));
+  assert.equal(el.hasAttribute('data-gallery-interacting'),false);
+  dom.window.close();
+});
+
+test('gallery navigation still works with the optional scrollbar disabled', async () => {
+  const dom=environment(),w=dom.window;
+  w.document.body.innerHTML='<div class="card__media"><div class="product-card-gallery__controls" hidden><button data-step="1"></button></div><product-card-gallery><a href="/products/one"><img src="/one.jpg"><template><img src="/two.jpg"></template></a></product-card-gallery></div>';
+  await tick();w.document.querySelector('button').click();await tick();
+  const gallery=w.document.querySelector('product-card-gallery');
+  assert.equal(gallery.querySelector('img.is-active').getAttribute('src'),'/two.jpg');
+  assert.equal(gallery.hasAttribute('data-gallery-interacting'),false);
+  dom.window.close();
+});
+
+test('header height preserves its visible-section contract without a mutation feedback loop', async () => {
+  const dom=environment(),w=dom.window;
+  w.document.body.innerHTML='<header class="shopify-section-group-header-group"></header><div class="shopify-section-group-header-group"></div>';
+  const [header,announcement]=w.document.querySelectorAll('.shopify-section-group-header-group');
+  header.getBoundingClientRect=()=>({height:80,top:-20,bottom:60});
+  announcement.getBoundingClientRect=()=>({height:30,top:60,bottom:90});
+  let writes=0;const original=w.document.documentElement.style.setProperty.bind(w.document.documentElement.style);
+  w.document.documentElement.style.setProperty=(...args)=>{writes++;original(...args);};
+  w.eval(fs.readFileSync('assets/total-header-height-variable.js','utf8'));
+  w.dispatchEvent(new w.Event('load'));await tick();await tick();
+  assert.equal(w.document.documentElement.style.getPropertyValue('--total-header-height'),'110px');
+  assert.equal(writes,1);
+  announcement.style.display='none';await tick();await tick();
+  assert.equal(w.document.documentElement.style.getPropertyValue('--total-header-height'),'80px');
+  assert.equal(writes,2);
   dom.window.close();
 });
 

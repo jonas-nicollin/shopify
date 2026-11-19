@@ -35,7 +35,7 @@
     {% endfor %}
   </a>
 </product-card-gallery>
-{% if count > 1 %}
+{% if count > 1 and settings.card_gallery_scrollbar != false %}
   <div class="product-card-gallery__scrollbar" style="--gallery-count:{{ count }};--gallery-index:0" hidden>
     <span class="product-card-gallery__thumb" aria-hidden="true"></span>
     <input type="range" min="1" max="{{ count }}" step="1" value="1" aria-controls="{{ gallery_id }}" aria-label="{{ 'sections.slideshow.load_slide' | t | escape }}" aria-valuetext="1 / {{ count }}">
@@ -59,12 +59,12 @@
 .product-card-gallery__controls button {pointer-events:auto;display:grid;place-items:center;width:44px;height:44px;padding:0;border:0;background:transparent;color:rgb(var(--color-foreground));cursor:pointer}
 .product-card-gallery__controls svg {display:block;width:10px;height:6px;transform:rotate(-90deg)}
 .product-card-gallery__controls [data-step="-1"] svg {transform:rotate(90deg)}
-.product-card-gallery__scrollbar {position:absolute;z-index:3;inset-inline:var(--image-padding,0px);bottom:var(--image-padding,0px);height:2px;background:rgba(var(--color-foreground),.15);opacity:1;transition:opacity 220ms ease}
+.product-card-gallery__scrollbar {position:absolute;z-index:3;inset-inline:var(--image-padding,0px);bottom:var(--image-padding,0px);height:2px;background:transparent;opacity:0;pointer-events:none;transition:opacity 220ms ease}
 .product-card-gallery__scrollbar[hidden] {display:none}
 @media(hover:hover) and (pointer:fine) and (min-width:750px){
-  .product-card-gallery__scrollbar {opacity:0}
-  .card-wrapper:is(:hover,:focus-within) .product-card-gallery__scrollbar {opacity:1}
+  .card-wrapper:hover .product-card-gallery__scrollbar {opacity:1;pointer-events:auto}
 }
+.card__media:has([data-gallery-interacting]) > .product-card-gallery__scrollbar,.card__media:has(:focus-visible) > .product-card-gallery__scrollbar {opacity:1;pointer-events:auto}
 @media(prefers-reduced-motion:reduce){.product-card-gallery__scrollbar {transition:none}}
 .product-card-gallery__thumb {display:block;height:100%;width:calc(100% / var(--gallery-count));background:rgb(var(--color-foreground));transform:translateX(calc(var(--gallery-index) * 100%));transition:transform 350ms ease}
 @media(prefers-reduced-motion:reduce){.product-card-gallery__thumb {transition:none}}
@@ -75,7 +75,7 @@
 if (!customElements.get('product-card-gallery')) {
   customElements.define('product-card-gallery', class extends HTMLElement {
     connectedCallback() { this.frame=requestAnimationFrame(()=>this.mount()); }
-    disconnectedCallback() { cancelAnimationFrame(this.frame);this.events?.abort(); }
+    disconnectedCallback() { cancelAnimationFrame(this.frame);clearTimeout(this.interactionTimer);this.events?.abort(); }
     mount() {
       const media=this.parentElement;
       const controls=media.querySelector('.product-card-gallery__controls');
@@ -89,7 +89,13 @@ if (!customElements.get('product-card-gallery')) {
       let current=0,version=0,start,suppressUntil=0;
       this.events=new AbortController();
       const on=(element,event,handler)=>element?.addEventListener(event,handler,{signal:this.events.signal});
+      const reveal=()=>{
+        clearTimeout(this.interactionTimer);this.dataset.galleryInteracting='';
+        this.interactionTimer=setTimeout(()=>{delete this.dataset.galleryInteracting;},1400);
+      };
+      on(media,'pointerdown',event=>{if(event.pointerType!=='mouse')reveal();});
       const show=async index=>{
+        if(this.hasAttribute('data-gallery-interacting'))reveal();
         index=(index+count)%count;
         const request=++version;
         if(!slides[index]){

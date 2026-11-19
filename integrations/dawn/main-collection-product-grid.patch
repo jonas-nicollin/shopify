@@ -1,0 +1,29 @@
+--- a/sections/main-collection-product-grid.liquid
++++ b/sections/main-collection-product-grid.liquid
+@@ -36,6 +36,13 @@
+       padding-bottom: {{ section.settings.padding_bottom }}px;
+     }
+   }
++  {% if section.settings.full_width %}
++    #shopify-section-{{ section.id }} .page-width {max-width:none}
++    #shopify-section-{{ section.id }} .collection.page-width {padding-inline:0}
++    #shopify-section-{{ section.id }} .facets-vertical.page-width {padding-inline:0}
++    #shopify-section-{{ section.id }} .facets-vertical > .facets-wrapper {padding-inline:1.5rem}
++    @media(min-width:750px){#shopify-section-{{ section.id }} .facets-vertical > .facets-wrapper {padding-inline:5rem}}
++  {% endif %}
+ {%- endstyle -%}
+ 
+ <div class="section-{{ section.id }}-padding gradient color-{{ section.settings.color_scheme }}">
+@@ -227,6 +234,12 @@
+       "label": "t:sections.main-collection-product-grid.settings.columns_desktop.label"
+     },
+     {
++      "type": "checkbox",
++      "id": "full_width",
++      "label": "Make products full width",
++      "default": false
++    },
++    {
+       "type": "color_scheme",
+       "id": "color_scheme",
+       "label": "t:sections.all.colors.label",

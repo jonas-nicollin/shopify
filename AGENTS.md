@@ -8,8 +8,9 @@
 - Current integration target: Dawn 15.2.0. Validate theme upgrades separately.
 - Test filters, pagination and media on the actual draft at desktop and mobile widths. Distinguish emulation and unit tests from physical-device testing.
 - Use Dawn's shared `card-product` snippet, with optional capabilities. Do not maintain a competing product-card implementation. The editorial collection grid remains an optional section.
-- Enable new shared-card capabilities explicitly at each caller. A shared snippet change is not permission to activate the gallery in search, recommendations, featured collections or every grid.
-- Keep reusable modules in this repository. Keep each client's complete theme, templates, settings and identity assets in a separate private repository. Do not upload a client theme wholesale to this public repository.
+- Shared-card gallery and scrollbar activation belong to Theme settings > Product cards. This global migration was explicitly requested on 19 November 2026. Validate affected callers; do not add competing per-section gallery toggles.
+- Keep reusable modules and small host integration patches in this repository; use Shopify as the working theme. A private complete-theme repository is optional. Always preserve an exact draft backup before upgrades. Never upload merchant settings, client assets or a complete client theme to this public library.
 - Track the exact upstream Dawn version and review upgrades in a separate draft. The published theme and latest Dawn release are references, not backups of the current draft.
 - Prefer native browser image loading with HTML src/srcset. Keep page pagination distinct from media loading; avoid hiding a whole card while waiting for image decoding.
 - End user-facing delivery responses with remaining tasks in priority order.
+- Use theme color variables or configured color schemes for all new component UI; do not hard-code brand colors.

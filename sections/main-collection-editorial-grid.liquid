@@ -44,7 +44,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   }
 {%- endstyle -%}
 
-<editorial-catalog class="catalog-grid section-{{ section.id }}-padding gradient color-{{ section.settings.color_scheme }}" data-section="{{ section.id }}" data-sticky="{{ section.settings.sticky_filters }}" data-count="{{ section.settings.show_product_count }}" data-lazy="{{ section.settings.enable_lazy_load }}" data-autoplay="{{ section.settings.editorial_video_autoplay }}" style="--catalog-mobile:{{ section.settings.columns_mobile }};--catalog-desktop:{{ section.settings.columns_desktop }};--catalog-span:{{ section.settings.columns_desktop | at_most: 2 }}">
+<editorial-catalog class="catalog-grid{% if section.settings.full_width %} catalog-grid--full-width{% endif %} section-{{ section.id }}-padding gradient color-{{ section.settings.color_scheme }}" data-section="{{ section.id }}" data-sticky="{{ section.settings.sticky_filters }}" data-count="{{ section.settings.show_product_count }}" data-lazy="{{ section.settings.enable_lazy_load }}" data-autoplay="{{ section.settings.editorial_video_autoplay }}" style="--catalog-mobile:{{ section.settings.columns_mobile }};--catalog-desktop:{{ section.settings.columns_desktop }};--catalog-span:{{ section.settings.columns_desktop | at_most: 2 }}">
   {%- paginate collection.products by section.settings.products_per_page -%}
     <div class="catalog-grid__layout{% if section.settings.filter_type == 'vertical' %} facets-vertical{% endif %} page-width">
       {{ 'component-facets.css' | asset_url | stylesheet_tag }}
@@ -77,9 +77,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
               {% liquid
                 assign skip_card_product_styles = false
                 assign secondary_hover = section.settings.show_secondary_image
-                if section.settings.enable_card_gallery
-                  assign secondary_hover = false
-                endif
               %}
               {% for product in collection.products %}
                 {% liquid
@@ -121,7 +118,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                   {% endif %}
                 {% endif %}
                 <li class="grid__item" data-catalog-item data-product="{{ product.id }}">
-                  {% render 'card-product', card_product: product, media_aspect_ratio: section.settings.image_ratio, show_secondary_image: secondary_hover, show_vendor: section.settings.show_vendor, show_rating: section.settings.show_rating, lazy_load: lazy_load, skip_styles: skip_card_product_styles, quick_add: section.settings.quick_add, section_id: section.id, enable_card_gallery: section.settings.enable_card_gallery, desktop_columns: section.settings.columns_desktop, mobile_columns: section.settings.columns_mobile %}
+                  {% render 'card-product', card_product: product, media_aspect_ratio: section.settings.image_ratio, show_secondary_image: secondary_hover, show_vendor: section.settings.show_vendor, show_rating: section.settings.show_rating, lazy_load: lazy_load, skip_styles: skip_card_product_styles, quick_add: section.settings.quick_add, section_id: section.id, desktop_columns: section.settings.columns_desktop, mobile_columns: section.settings.columns_mobile %}
                 </li>
                 {% assign skip_card_product_styles = true %}
               {% endfor %}
@@ -138,6 +135,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 {% stylesheet %}
 .catalog-grid {display:block}
 .catalog-grid__layout {position:relative}
+.catalog-grid--full-width > .catalog-grid__layout {max-width:none;padding-inline:0}
+.catalog-grid--full-width .facets-wrapper {padding-inline:1.5rem}
+@media(min-width:750px){.catalog-grid--full-width .facets-wrapper {padding-inline:5rem}}
 .shopify-section:has(.catalog-grid .mobile-facets__disclosure[open]) {position:relative;z-index:100}
 .catalog-grid .facets-wrapper {background:rgb(var(--color-background));align-self:start}
 @media(max-width:749px){
@@ -174,7 +174,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 .catalog-grid__editorial > a {position:absolute;inset:0}
 .catalog-grid__editorial img,.catalog-grid__editorial video {object-fit:cover}
 .catalog-grid__editorial video {position:absolute;inset:0}
-.catalog-grid__video-toggle {position:absolute;inset:auto 1rem 1rem auto;z-index:1;width:44px;height:44px;border:0;background:rgba(255,255,255,.85);color:#111;cursor:pointer}
+.catalog-grid__video-toggle {position:absolute;inset:auto 1rem 1rem auto;z-index:1;width:44px;height:44px;border:0;background:rgba(var(--color-background),.85);color:rgb(var(--color-foreground));cursor:pointer}
 .catalog-grid__video-toggle svg {width:14px;height:14px}
 .catalog-grid__video-toggle [hidden] {display:none}
 .catalog-grid__pagination {text-align:center;margin:2rem auto}
@@ -332,7 +332,7 @@ if (!customElements.get('editorial-catalog')) {
 
 {% schema %}
 {
-  "name": "Product grid — Editorial",
+  "name": "Editorial product grid",
   "enabled_on": {
     "templates": [
       "collection"
@@ -358,6 +358,12 @@ if (!customElements.get('editorial-catalog')) {
       "step": 1,
       "default": 4,
       "label": "t:sections.main-collection-product-grid.settings.columns_desktop.label"
+    },
+    {
+      "type": "checkbox",
+      "id": "full_width",
+      "label": "Make products full width",
+      "default": false
     },
     {
       "type": "color_scheme",
@@ -416,8 +422,7 @@ if (!customElements.get('editorial-catalog')) {
         }
       ],
       "default": "adapt",
-      "label": "t:sections.main-collection-product-grid.settings.image_ratio.label",
-      "info": "Choose the format for product images in this section. Global card appearance stays in Theme settings."
+      "label": "t:sections.main-collection-product-grid.settings.image_ratio.label"
     },
     {
       "type": "checkbox",
@@ -548,12 +553,6 @@ if (!customElements.get('editorial-catalog')) {
       "default": 36
     },
     {
-      "type": "checkbox",
-      "id": "enable_card_gallery",
-      "label": "Card image gallery",
-      "default": true
-    },
-    {
       "type": "select",
       "id": "sticky_filters",
       "label": "Sticky filters",
@@ -633,7 +632,7 @@ if (!customElements.get('editorial-catalog')) {
   ],
   "presets": [
     {
-      "name": "Product grid — Editorial"
+      "name": "Editorial product grid"
     }
   ]
 }

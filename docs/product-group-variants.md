@@ -1,33 +1,49 @@
-# Product Group Variants — recovered source and analysis
+# Product Group Variants
 
-Recovered from the actual draft on 19 November 2026. This is an archive of the existing implementation, not a newly validated installable snippet. The live product block and its CSS have not been modified by this import.
+The module is now `snippets/product-group-variants.liquid`, with its own scoped styles. The native product section retains the existing `product_group_variants` block type and `label` setting; its block case renders the snippet. Remove the old base.css styles in the same migration.
 
-## What it does
+## Contract and behavior
 
-The `product_group_variants` block lives in `sections/main-product.liquid` (around lines 108–160; schema around line 830). Styles live in `assets/base.css` around lines 142–230.
+- `product.metafields.custom.product_group.value` references a metaobject.
+- `products.value` is the list of separate products, in merchant order; `sort.value == 'Alphabetical'` sorts by title.
+- `display.value == 'Image'` shows 60 × 60 px thumbnails, with 60/120/180 px responsive sources. Other modes and products without images show visible product-title links.
+- Unresolved references are skipped. Empty groups produce no wrapper.
+- Links always have an escaped product-title accessible name; the current product uses `aria-current="page"`. Names appear on hover and keyboard focus for thumbnails.
+- Colors use the active theme color scheme; no JavaScript is required.
 
-`product.metafields.custom.product_group` points to a Product Group metaobject. Its `products` list is the membership/order source; `sort` may request alphabetical order and `display` selects image output. The block has a text setting `label`, default `Colors`.
+This is product-to-product navigation, not Shopify variants: inventory, prices and URLs remain separate. No product data or metaobject definitions are changed by the extraction.
 
-Each item navigates to a separate product URL. These are grouped products, not variants of the currently viewed product: stock, prices and product URLs stay separate. This is appropriate when each color/design needs its own product page. It is not a replacement for Shopify variants when options belong to one product.
-
-The current draft was inspected on a product with four group members: all four images and links rendered, and the current product was marked active. This does not establish behavior for empty groups or missing images.
-
-## Recommended extraction
-
-Use `snippets/product-group-variants.liquid` for the markup and scoped styles, then keep only a short render call in the native product section's block case. Preserve the block type, `label` setting ID and metafield contract so current templates continue to work. Move the existing CSS out of base.css only in the same migration, after checking the product page at desktop and mobile widths.
-
-Before that migration:
-
-1. Always provide a product-title accessible label and a visible text fallback if the image is missing or display mode is not Image. The current conditional can produce empty links.
-2. Use explicit `.value` for metaobject fields (`group.sort.value`, `group.display.value`, `group.products.value`) instead of relying on field-drop coercion. The current image mode rendered in the tested group; this is a robustness improvement, not a claim that every current group is broken.
-3. Validate the resolved products list, preserve its manual order unless alphabetical sorting is selected, and tolerate unresolved product references.
-4. Align HTML image dimensions with the actual 60 px thumbnail display and keep an appropriate source resolution for high-density screens.
-5. Prefer `aria-current="page"` for the current product; expose the name on keyboard focus as well as hover. The existing hover-only CSS tooltip can duplicate an image's accessible name in some browsers.
-6. Make presentation options explicit without introducing shop names into classes. Keep product grouping and image-gallery behavior as separate optional modules.
-
-No store-wide variant migration or new metaobject definitions were performed here.
+Install using [the host integration guide](installation.md). The original implementation below is preserved only as historical migration context; it is no longer the installable source.
 
 Reference: [Shopify Liquid metaobjects](https://shopify.dev/docs/api/liquid/objects/metaobject).
+
+## Installing on another Dawn theme
+
+Add this block definition to the main-product schema only when it is absent:
+
+```json
+{
+  "type": "product_group_variants",
+  "name": "Product group variants",
+  "settings": [
+    {
+      "type": "text",
+      "id": "label",
+      "label": "Label",
+      "default": "Colors"
+    }
+  ]
+}
+```
+
+Add the corresponding case inside the product block loop:
+
+```liquid
+{%- when 'product_group_variants' -%}
+  {% render 'product-group-variants', product: product, block: block %}
+```
+
+Then add the block in the product template using the theme editor. Create or map the documented metaobject fields in that shop; theme files do not transfer their definitions or content.
 
 ## Existing Liquid block (unchanged source)
 
