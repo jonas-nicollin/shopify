@@ -32,7 +32,10 @@
   <div class="collection-context collection-context--heading page-width">
     <h2 class="collection-context__title">{{ root_link.title | escape }}</h2>
   </div>
-  <nav class="collection-context collection-context--navigation page-width" aria-label="{{ root_link.title | escape }}">
+  {%- if root_link.links.size > 0 -%}
+  <collection-navigation class="collection-context collection-context--navigation">
+    <nav class="page-width" aria-label="{{ root_link.title | escape }}">
+      <div class="collection-context__scroll">
       <ul class="collection-context__links" role="list">
         <li><a href="{{ root_link.url | escape }}"{% if child_index == -1 %} aria-current="page"{% endif %}>{{ view_all_label | default: 'View all' | escape }}</a></li>
         {% for group in root_link.links %}
@@ -45,26 +48,84 @@
           {% endfor %}
         {% endfor %}
       </ul>
-  </nav>
+        <button class="collection-context__arrow collection-context__arrow--previous" type="button" data-direction="-1" aria-label="{{ 'general.slider.previous_slide' | t }}" hidden><svg viewBox="0 0 10 16" aria-hidden="true"><path d="m8 2-6 6 6 6"/></svg></button>
+        <button class="collection-context__arrow collection-context__arrow--next" type="button" data-direction="1" aria-label="{{ 'general.slider.next_slide' | t }}" hidden><svg viewBox="0 0 10 16" aria-hidden="true"><path d="m2 2 6 6-6 6"/></svg></button>
+      </div>
+    </nav>
+  </collection-navigation>
+  {%- endif -%}
 {%- endif -%}
 
 {% stylesheet %}
 .collection-context {color: rgb(var(--color-foreground));font: inherit;letter-spacing: normal}
 .collection-context.collection-context--heading {padding-block: 2rem 0}
-.collection-context.collection-context--navigation {position: sticky;top: var(--catalog-top,0px);z-index: 3;background: rgb(var(--color-background));padding-block: 0 1rem}
+.collection-context.collection-context--navigation {display: block;position: relative;background: rgb(var(--color-background));padding-block: 0 1rem}
+.catalog-grid[data-sticky-eligible="true"] .collection-context--navigation {position: sticky;top: var(--catalog-top,0px);z-index: 3}
 @media (min-width: 750px) {.collection-context.collection-context--heading {padding-top: 3rem}}
-.catalog-grid--full-width > .collection-context {max-width: none;padding-inline: 1.5rem}
-@media (min-width: 750px) and (max-width: 989px) {.catalog-grid--full-width > .collection-context {padding-inline: 5rem}}
 .collection-context .collection-context__title {margin: 0 0 2.4rem;font-size: calc(var(--font-heading-scale) * 2.8rem);font-weight: inherit;font-style: inherit;letter-spacing: normal}
 @media (min-width: 750px) {.collection-context .collection-context__title {margin-bottom: 3.2rem;font-size: calc(var(--font-heading-scale) * 3.6rem)}}
-.collection-context__links {display: flex;gap: 2.4rem;list-style: none;padding: 0;margin: 0;overflow-x: auto;overscroll-behavior-inline: contain;scrollbar-width: thin}
+.collection-context__scroll {position: relative;min-width: 0}
+.collection-context__links {display: flex;gap: 2.4rem;list-style: none;padding: 0;margin: 0;overflow-x: auto;overscroll-behavior-inline: contain;scrollbar-width: none;scroll-padding-inline: 44px}
+.collection-context__links::-webkit-scrollbar {display: none}
 .collection-context__links li {flex: 0 0 auto;margin: 0;padding: 0}
-.collection-context__links a {display: block;min-height: 44px;padding: .6rem 0 1.8rem;text-decoration: none;border-bottom: 1px solid transparent;color: rgba(var(--color-foreground),.65);font: inherit;letter-spacing: normal}
+.collection-context__links a {display: block;min-height: 44px;padding: .6rem 0 1rem;text-decoration: none;border-bottom: 1px solid transparent;color: rgba(var(--color-foreground),.65);font: inherit;letter-spacing: normal}
 .collection-context__links a:is(:hover,[aria-current="page"]) {color: rgb(var(--color-foreground));border-bottom-color: currentColor}
-.collection-context a:focus-visible {outline: 2px solid currentColor;outline-offset: -2px}
+.collection-context__arrow {position: absolute;inset-block: 0;display: flex;align-items: center;justify-content: center;width: 44px;padding: 0;border: 0;color: rgb(var(--color-foreground));cursor: pointer}
+.collection-context__arrow[hidden] {display: none}
+.collection-context__arrow--previous {left: 0;background: linear-gradient(to right,rgb(var(--color-background)) 45%,rgba(var(--color-background),0))}
+.collection-context__arrow--next {right: 0;background: linear-gradient(to left,rgb(var(--color-background)) 45%,rgba(var(--color-background),0))}
+.collection-context__arrow svg {width: 8px;height: 14px;fill: none;stroke: currentColor;stroke-width: 1.2}
+.collection-context :is(a,button):focus-visible {outline: 2px solid currentColor;outline-offset: -2px}
 .collection-context.collection-context--breadcrumbs {padding-block: 3rem}
 .collection-context--breadcrumbs ol {display: flex;flex-wrap: wrap;gap: .4rem .8rem;list-style: none;padding: 0;margin: 0}
 .collection-context--breadcrumbs li {display: inline;margin: 0;padding: 0}
 .collection-context--breadcrumbs li + li::before {content: '·';display: inline-block;margin-inline-end: .8rem}
 .collection-context--breadcrumbs a {color: inherit;text-underline-offset: 1rem;text-decoration-thickness: 1px}
 {% endstylesheet %}
+
+{% javascript %}
+if (!customElements.get('collection-navigation')) {
+  customElements.define('collection-navigation', class extends HTMLElement {
+    connectedCallback() {
+      this.frame = requestAnimationFrame(() => {
+        this.events = new AbortController();
+        const options = { signal: this.events.signal };
+        this.links = this.querySelector('.collection-context__links');
+        this.buttons = [...this.querySelectorAll('[data-direction]')];
+        if (!this.links) return;
+        const update = () => this.updateArrows();
+        this.links.addEventListener('scroll', update, { ...options, passive: true });
+        window.addEventListener('resize', update, options);
+        this.buttons.forEach(button => button.addEventListener('click', () => {
+          this.links.scrollBy({ left: Number(button.dataset.direction) * this.links.clientWidth * .75,
+            behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+        }, options));
+        if ('ResizeObserver' in window) {
+          this.resize = new ResizeObserver(update);
+          this.resize.observe(this.links);
+          [...this.links.children].forEach(item => this.resize.observe(item));
+        }
+        update();
+      });
+    }
+    updateArrows() {
+      const list = this.links.getBoundingClientRect();
+      const items = [...this.links.children].map(item => item.getBoundingClientRect());
+      const left = items.some(item => item.left < list.left - 1);
+      const right = items.some(item => item.right > list.right + 1);
+      this.buttons.forEach(button => {
+        const hidden = Number(button.dataset.direction) < 0 ? !left : !right;
+        if (hidden && document.activeElement === button) {
+          // Keep keyboard focus on the link just revealed at this end.
+          const links = [...this.links.querySelectorAll('a')];
+          const rtl = getComputedStyle(this.links).direction === 'rtl';
+          const atStart = Number(button.dataset.direction) < 0 !== rtl;
+          (atStart ? links[0] : links[links.length - 1])?.focus({ preventScroll: true });
+        }
+        button.hidden = hidden;
+      });
+    }
+    disconnectedCallback() { cancelAnimationFrame(this.frame); this.events?.abort(); this.resize?.disconnect(); }
+  });
+}
+{% endjavascript %}

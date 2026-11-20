@@ -1,6 +1,6 @@
 # Shopify editorial components
 
-Reusable product grids, image galleries and collection navigation for **Dawn 15.2.0**. This repository is a component library, not a complete Shopify theme. The current version is **0.7.0**.
+Reusable product grids, image galleries and collection navigation for **Dawn 15.2.0**. This repository is a component library, not a complete Shopify theme. The current version is **0.8.0**.
 
 ## Install into a draft
 
@@ -24,7 +24,7 @@ One Product grid supports optional editorial image/video tiles, numbered paginat
 
 Editorial positions follow the result order and Shopify pagination offset. Configure **Product media field** with `namespace.key` for a direct image/video file, or `namespace.key.field` for a media field in a metaobject. Empty or unsupported values fall back to the product's second image, then its featured image. Hosted Shopify videos are supported; external-video URLs and list references are not.
 
-A dedicated navigation menu supplies one contextual row and product breadcrumbs. The row stays below visible header regions; its title scrolls away. Existing sticky-filter settings determine whether filters remain below it. On mobile, links scroll horizontally. See [the navigation contract](docs/collection-navigation.md).
+A dedicated navigation menu supplies one contextual row and product breadcrumbs. The row stays below visible header regions; its title scrolls away. Existing sticky-filter settings determine whether filters remain below it. Links scroll horizontally with gradient-backed directional buttons when they overflow. A lone View all row is omitted. Sticky behavior is disabled when the grid fits the available viewport. Navigation keeps the normal page width independently of full-width products. See [the navigation contract](docs/collection-navigation.md).
 
 ## Shared product cards
 
@@ -37,6 +37,8 @@ The components use Dawn's native prices, quick add, facet markup, accessible dra
 ## Optional modules
 
 The library also includes Product breadcrumbs, Editorial push, Editorial dispatch, Gift options and Product Group Variants. Install only the modules needed by the host. Their configuration and content remain in Shopify; see [installation](docs/installation.md).
+
+See [the v0.8 migration](docs/migration-v8.md) for the optional cart packaging preference, currency-label integration and navigation changes.
 
 ## Validation
 

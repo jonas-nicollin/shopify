@@ -6,6 +6,7 @@ const { Liquid } = require('liquidjs');
 const { JSDOM } = require('jsdom');
 const engine = new Liquid({ root: path.join(__dirname, '../snippets'), extname: '.liquid' });
 engine.registerTag('stylesheet', { parse(token, tokens) { while(tokens.length && tokens.shift().name !== 'endstylesheet') {} }, render() { return ''; } });
+engine.registerTag('javascript', { parse(token, tokens) { while(tokens.length && tokens.shift().name !== 'endjavascript') {} }, render() { return ''; } });
 const link = (title, handle, links=[]) => ({ title, url: '/collections/'+handle, links });
 const menu = { links: [link('Necklaces','necklaces',[link('Grape','grape'),link('Lungo Grape','lungo-grape')]),link('Bracelets','bracelets')] };
 const context = { menu, routes: {root_url:'/'}, shop:{name:'Example'}, current_collection:{handle:'lungo-grape'} };
@@ -54,4 +55,15 @@ test('editorial field supports direct image/video, metaobject and safe fallback'
   assert.equal((await evaluate('custom.source.media',{media:{value:{id:'nested',media_type:'video'}}})).trim(),'nested');
   for(const field of ['', 'bad', 'custom.source.extra.bad'])assert.equal((await evaluate(field,{id:'bad',media_type:'image'})).trim(),'fallback');
   assert.equal((await evaluate('custom.source',{id:'file',media_type:'generic_file'})).trim(),'fallback');
+});
+
+test('single root keeps its heading without a redundant View all navigation',async()=>{
+  const doc=new JSDOM(await engine.renderFile('collection-context',{...context,mode:'navigation',current_collection:{handle:'bracelets'}})).window.document;
+  assert.equal(doc.querySelector('h2').textContent,'Bracelets');
+  assert.equal(doc.querySelector('nav'),null);
+});
+test('currency code is not repeated when its symbol is identical',async()=>{
+  for (const [iso_code,symbol,expected] of [['CHF','CHF','CHF'],['USD','$','USD $'],['EUR','€','EUR €'],['GBP','£','GBP £'],['CHF',' CHF ','CHF']]) {
+    assert.equal((await engine.renderFile('currency-label',{currency:{iso_code,symbol}})).trim(),expected);
+  }
 });

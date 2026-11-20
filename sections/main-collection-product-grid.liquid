@@ -66,6 +66,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
               </form>
             </catalog-filters-form>
           {% endif %}
+          {% if section.settings.filter_type == 'vertical' %}<p class="catalog-grid__vertical-count small-hide">{{ 'products.facets.product_count_simple' | t: count: collection.products_count }}</p>{% endif %}
         </aside>
       {%- endif -%}
       <div class="product-grid-container" id="ProductGridContainer">
@@ -146,29 +147,37 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 </product-catalog>
 
 {% stylesheet %}
-.catalog-grid {display:block}
+.catalog-grid {display:block;isolation:isolate;position:relative;z-index:0}
 .catalog-grid__layout {position:relative}
+@media(min-width:750px){
+  .catalog-grid__layout.facets-vertical {display:grid;grid-template-columns:minmax(0,26rem) minmax(0,1fr);column-gap:3rem}
+  .catalog-grid__layout.facets-vertical > .facets-wrapper {min-width:0;padding-right:0}
+  .catalog-grid__layout.facets-vertical .facets__form-vertical {width:100%}
+  .catalog-grid__layout.facets-vertical:not(:has(> .facets-wrapper)) {grid-template-columns:minmax(0,1fr)}
+}
 .catalog-grid--full-width > .catalog-grid__layout {max-width:none;padding-inline:1.5rem}
 @media(min-width:750px) and (max-width:989px){.catalog-grid--full-width > .catalog-grid__layout {padding-inline:5rem}}
 .shopify-section:has(.catalog-grid .mobile-facets__disclosure[open]) {position:relative;z-index:100}
 .catalog-grid .facets-wrapper {background:rgb(var(--color-background));align-self:start}
 @media(max-width:749px){
-  .catalog-grid:is([data-sticky="mobile"],[data-sticky="both"]) .facets-wrapper {position:sticky;top:calc(var(--catalog-top,0px) + var(--catalog-nav-height,0px));z-index:2}
+  .catalog-grid[data-sticky-eligible="true"]:is([data-sticky="mobile"],[data-sticky="both"]) .facets-wrapper {position:sticky;top:calc(var(--catalog-top,0px) + var(--catalog-nav-height,0px));z-index:2}
 }
 @media(min-width:750px){
-  .catalog-grid:is([data-sticky="desktop"],[data-sticky="both"]) .facets-wrapper {position:sticky;top:calc(var(--catalog-top,0px) + var(--catalog-nav-height,0px));z-index:2}
-  .catalog-grid .facets-vertical .facets-wrapper {max-height:calc(100dvh - var(--catalog-top,0px) - var(--catalog-nav-height,0px));overflow-y:auto}
+  .catalog-grid[data-sticky-eligible="true"]:is([data-sticky="desktop"],[data-sticky="both"]) .facets-wrapper {position:sticky;top:calc(var(--catalog-top,0px) + var(--catalog-nav-height,0px));z-index:2}
+  .catalog-grid[data-sticky-eligible="true"]:is([data-sticky="desktop"],[data-sticky="both"]) .facets-vertical .facets-wrapper {max-height:calc(100dvh - var(--catalog-top,0px) - var(--catalog-nav-height,0px));overflow-y:auto}
   .catalog-grid .facets-wrapper:has(.mobile-facets__disclosure[open]) {overflow:visible}
 }
+.catalog-grid .facets-wrapper:has(.mobile-facets__disclosure[open]) {z-index:4;overflow:visible}
 .catalog-grid catalog-filters-form {display:block}
 .catalog-grid catalog-price-range {display:flex}
 .catalog-grid .facets__header catalog-filter-remove {margin-left:auto}
 .catalog-grid .active-facets catalog-filter-remove:only-child {display:none}
+.catalog-grid .facets-vertical .active-facets .active-facets-vertical-filter:only-child > catalog-filter-remove {display:none}
 .catalog-grid .mobile-facets__close {z-index:101}
 .catalog-grid .mobile-facets__wrapper {z-index:4}
 .catalog-grid__vertical-sort {margin-top:2rem}
 .catalog-grid__vertical-sort select {width:100%;padding:1rem;background:transparent;color:inherit;border:1px solid currentColor}
-.catalog-grid[data-count="false"] :is(.product-count,.product-count-vertical,.mobile-facets__count,.catalog-grid__count) {display:none!important}
+.catalog-grid[data-count="false"] :is(.product-count,.product-count-vertical,.mobile-facets__count,.catalog-grid__count,.catalog-grid__vertical-count) {display:none!important}
 .catalog-grid[aria-busy="true"] #ProductGridContainer {opacity:.55;pointer-events:none}
 .catalog-grid #ProductGridContainer {transition:opacity 220ms ease;min-width:0}
 .catalog-grid .product-grid {display:grid;grid-template-columns:repeat(var(--catalog-mobile),minmax(0,1fr));grid-auto-flow:row dense}
@@ -230,7 +239,7 @@ if (!customElements.get('product-catalog')) {
       on(this,'submit',event => { if(event.target.closest('catalog-filters-form')) {event.preventDefault();clearTimeout(this.timer);this.submitFilters(event.target);} });
       on(this,'click',event => {
         const remove = event.target.closest('catalog-filter-remove a,[data-catalog-reset]');
-        if (remove && !event.metaKey && !event.ctrlKey) {event.preventDefault();clearTimeout(this.timer);this.renderFilters(new URL(remove.href),true);}
+        if (remove && !event.metaKey && !event.ctrlKey) {event.preventDefault();clearTimeout(this.timer);const url=new URL(remove.href),view=new URL(location.href).searchParams.get('view');if(view)url.searchParams.set('view',view);this.renderFilters(url,true);}
         const next = event.target.closest('[data-catalog-next]');
         if (next && next.dataset.retry !== 'true' && !event.metaKey && !event.ctrlKey) {event.preventDefault();this.loadNext(next);}
         const toggle = event.target.closest('[data-video-toggle]');
@@ -249,7 +258,15 @@ if (!customElements.get('product-catalog')) {
           if(['sticky','fixed'].includes(getComputedStyle(el).position)&&rect.top<=top+1&&rect.bottom>top)top=rect.bottom;
         }
         this.style.setProperty('--catalog-top',top+'px');
-        this.style.setProperty('--catalog-nav-height',(this.querySelector('.collection-context--navigation')?.getBoundingClientRect().height||0)+'px');
+        const navigationHeight=this.querySelector('.collection-context--navigation')?.getBoundingClientRect().height||0;
+        const grid=this.querySelector('#product-grid');
+        const vertical=matchMedia('(min-width: 750px)').matches&&this.querySelector('.facets-vertical');
+        const toolbarHeight=vertical?0:(this.querySelector('.facets-wrapper')?.getBoundingClientRect().height||0);
+        // Compare the complete grid with the viewport, independent of current scroll position.
+        const available=Math.max(0,window.innerHeight-top-navigationHeight-toolbarHeight);
+        const eligible=!!grid&&grid.getBoundingClientRect().height>available+1;
+        this.dataset.stickyEligible=String(eligible);
+        this.style.setProperty('--catalog-nav-height',(eligible?navigationHeight:0)+'px');
       };
       const queue = () => {if(!this.offsetFrame)this.offsetFrame=requestAnimationFrame(offset);};
       this.updateOffset=queue;
@@ -271,7 +288,7 @@ if (!customElements.get('product-catalog')) {
       const mobile=form.id==='FacetFiltersFormMobile';
       const drawerSort=form.id==='FacetSortDrawerForm';
       const forms=mobile?[form]:drawerSort?[this.querySelector('#FacetFiltersFormMobile'),form].filter(Boolean):[...this.querySelectorAll('catalog-filters-form form')].filter(item=>item.id!=='FacetFiltersFormMobile');
-      const url=new URL(location.href);url.search='';
+      const url=new URL(location.href),view=url.searchParams.get('view');url.search='';if(view)url.searchParams.set('view',view);
       forms.forEach(item=>new FormData(item).forEach((value,key)=>{if(value!==''&&!(drawerSort&&item!==form&&key==='sort_by'))url.searchParams.append(key,value);}));
       this.renderFilters(url,true);
     }
@@ -309,13 +326,15 @@ if (!customElements.get('product-catalog')) {
       finally {if(this.request===controller)this.removeAttribute('aria-busy');}
     }
     observeContent() {
-      const navigation=this.querySelector('.collection-context--navigation');
-      if(this.navigation!==navigation){
-        if(this.navigation)this.resize?.unobserve(this.navigation);
-        this.navigation=navigation;
-        if(navigation)this.resize?.observe(navigation);
-        this.updateOffset?.();
+      for(const [key,selector] of [['navigation','.collection-context--navigation'],['grid','#product-grid'],['toolbar','.facets-wrapper']]){
+        const element=this.querySelector(selector);
+        if(this[key]!==element){
+          if(this[key])this.resize?.unobserve(this[key]);
+          this[key]=element;
+          if(element)this.resize?.observe(element);
+        }
       }
+      this.updateOffset?.();
       const items=[...this.querySelectorAll('[data-catalog-item]:not([data-observed])')];
       const observerSupported='IntersectionObserver' in window;
       if(observerSupported&&!this.mediaObserver)this.mediaObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){this.mediaObserver.unobserve(entry.target);this.loadMedia(entry.target);}}),{rootMargin:'500px'});

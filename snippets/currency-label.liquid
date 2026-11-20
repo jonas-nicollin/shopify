@@ -1,0 +1,4 @@
+{%- assign code = currency.iso_code | strip -%}
+{%- assign symbol = currency.symbol | strip -%}
+{{- code | escape -}}
+{%- if symbol != blank and symbol != code %} {{ symbol | escape }}{% endif -%}

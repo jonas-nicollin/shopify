@@ -10,6 +10,7 @@ Target: Dawn 15.2.0. This library is not a complete client theme. Install select
 | Product breadcrumbs | `sections/product-breadcrumbs.liquid` and navigation snippets | First section in the footer group, same menu; renders only on products |
 | Product Group Variants | `snippets/product-group-variants.liquid` | Render from main-product's existing block case; retain its schema |
 | One of a kind badge | `snippets/product-badge-one-of-a-kind.liquid` | Shared card renders it in both native badge locations |
+| Currency label | `snippets/currency-label.liquid` | Merge `currency-label.patch` into the shared country picker |
 | Header height | `assets/total-header-height-variable.js` | Load once in layout, after the body content |
 | Legacy collection pagination | `assets/ajaxinate.min.js` | Existing native grid initialization and filter reinitialization; do not activate on the consolidated Product grid |
 | Editorial push / dispatch / gift options | Corresponding files under `sections/` | Optional section installation; existing data contracts remain |
@@ -33,6 +34,8 @@ Gallery activation now belongs to Theme settings > Product cards. The previous s
 The displayed section name is **Product grid**. Former editorial templates migrate to the canonical native filename; see [v0.5 migration](migration-v5.md). Keep one main grid per template. Featured collection is a separate selection/carousel section and may coexist.
 
 Apply the [v0.7 migration](migration-v7.md) for asynchronous gallery asset registration, rating removal, badge schemes and sticky navigation.
+
+Apply the [v0.8 migration](migration-v8.md) for overflow navigation, conditional sticky behavior, vertical facets and the optional packaging preference.
 
 ## Header-height contract
 

@@ -8,6 +8,12 @@
     assign message_enabled = true
   endif
   assign gift_message = cart.attributes['Gift message'] | default: ''
+  assign packaging_count = 0
+  for item in cart.items
+    if item.requires_shipping and item.gift_card != true
+      assign packaging_count = packaging_count | plus: item.quantity
+    endif
+  endfor
 -%}
 
 {%- if cart != empty -%}
@@ -18,6 +24,7 @@
     <div class="page-width">
       <gift-options-form-v4
         data-item-count="{{ cart.item_count }}"
+        data-packaging-count="{{ packaging_count }}"
         data-legacy-wrapping="{{ cart.attributes['Gift wrapping'] | escape }}"
         data-legacy-card="{{ cart.attributes['Gift card'] | escape }}"
         data-legacy-message="{% unless message_enabled %}{{ cart.attributes['Gift message'] | escape }}{% endunless %}"
@@ -132,6 +139,20 @@
             </div>
 
           </div>
+
+          <div class="gift-options__packaging" data-packaging-choice{% if packaging_count < 2 %} hidden{% endif %}>
+            <label class="cart-attribute-form__choice">
+              <input type="checkbox" data-fewer-boxes disabled
+                aria-describedby="PackagingHelp-{{ section.id }}"
+                {% if cart.attributes['Packaging preference'] == 'Fewer boxes' %}checked{% endif %}>
+              <span>{{ section.settings.packaging_label | default: 'Use fewer boxes' | escape }}</span>
+            </label>
+            <p id="PackagingHelp-{{ section.id }}" class="gift-options__packaging-help">
+              <span data-packaging-help>{{ section.settings.packaging_help | default: 'Where possible, group my items in fewer boxes. Each item remains individually protected.' | escape }}</span>
+              <span data-packaging-gift hidden>{{ section.settings.packaging_gift_help | default: 'Gift orders are individually packaged.' | escape }}</span>
+            </p>
+          </div>
+          <input type="hidden" name="attributes[Packaging preference]" form="cart" data-output="packaging" value="">
 
           <input
             type="hidden"
@@ -292,6 +313,14 @@
       font: inherit;
     }
 
+    #GiftOptionsSection-{{ section.id }} .gift-options__packaging {
+      border-top: 1px solid rgba(var(--color-foreground), .12);
+      padding-top: 2.4rem;
+      margin-top: 2.4rem;
+    }
+    #GiftOptionsSection-{{ section.id }} .gift-options__packaging:has(input:disabled) .cart-attribute-form__choice {cursor: default;opacity: .65;}
+    #GiftOptionsSection-{{ section.id }} .gift-options__packaging-help {margin: .8rem 0 0;max-width: 60rem;font: inherit;color: rgba(var(--color-foreground), .65);}
+
     #GiftOptionsSection-{{ section.id }} .gift-options__message-meta {
       display: flex;
       justify-content: space-between;
@@ -330,6 +359,9 @@
           const options = { signal: this.controller.signal };
           this.enabled = this.querySelector('[data-gift-enabled]');
           this.personalised = this.querySelector('[data-message-enabled]');
+          this.packaging = this.querySelector('[data-fewer-boxes]');
+          this.packagingCount = Number(this.dataset.packagingCount || 0);
+          const stalePackaging = this.packaging.checked && (this.enabled.checked || this.packagingCount < 2);
           this.message = this.querySelector('[data-gift-message]');
           this.status = this.querySelector('[data-save-status]');
           this.retry = this.querySelector('[data-retry]');
@@ -337,7 +369,7 @@
           this.revision = this.revision || 0;
           this.savedRevision = this.savedRevision || 0;
           this.addEventListener('change', (event) => {
-            if (!event.target.matches('[data-gift-enabled], [data-message-enabled]')) return;
+            if (!event.target.matches('[data-gift-enabled], [data-message-enabled], [data-fewer-boxes]')) return;
             if (!this.enabled.checked) this.personalised.checked = false;
             this.update();
             this.queueSave(0);
@@ -371,13 +403,16 @@
             this.unsubscribeCart = subscribe(PUB_SUB_EVENTS.cartUpdate, (event) => {
               const count = event?.cartData?.item_count;
               if (typeof count === 'number') this.closest('.gift-options-section').hidden = count === 0;
+              if (Array.isArray(event?.cartData?.items)) {
+                this.setPackagingCount(event.cartData.items);
+              }
             });
           }
           this.update();
           // Clear obsolete attributes only; preserve saved gift choices and message.
           if (this.dataset.legacyWrapping ||
               (this.dataset.legacyCard && (!this.enabled.checked || this.dataset.legacyCard !== 'Personalised')) ||
-              this.dataset.legacyMessage) this.queueSave(0);
+              this.dataset.legacyMessage || stalePackaging) this.queueSave(0);
         }
         disconnectedCallback() {
           clearTimeout(this.saveTimer);
@@ -387,6 +422,12 @@
           this.controller = null;
           this.unsubscribeCart?.();
         }
+        setPackagingCount(items) {
+          const previous = this.packaging.checked;
+          this.packagingCount = items.reduce((count, item) => count + (item.requires_shipping && !item.gift_card ? item.quantity : 0), 0);
+          this.update();
+          if (previous !== this.packaging.checked) this.queueSave(0);
+        }
         attributes() {
           const enabled = this.enabled.checked;
           const personalised = enabled && this.personalised.checked;
@@ -394,12 +435,19 @@
             'Gift order': enabled ? 'Yes' : '',
             'Gift wrapping': '', // Migration cleanup only; no wrapping feature.
             'Gift card': personalised ? 'Personalised' : '',
-            'Gift message': personalised ? this.message.value : ''
+            'Gift message': personalised ? this.message.value : '',
+            'Packaging preference': !enabled && this.packagingCount > 1 && this.packaging.checked ? 'Fewer boxes' : ''
           };
         }
         update() {
           const enabled = this.enabled.checked;
           const personalised = enabled && this.personalised.checked;
+          const packagingAllowed = !enabled && this.packagingCount > 1;
+          this.packaging.disabled = !packagingAllowed;
+          if (!packagingAllowed) this.packaging.checked = false;
+          this.querySelector('[data-packaging-choice]').hidden = this.packagingCount < 2;
+          this.querySelector('[data-packaging-help]').hidden = enabled;
+          this.querySelector('[data-packaging-gift]').hidden = !enabled;
           this.querySelector('[data-gift-body]').hidden = !enabled;
           this.querySelector('[data-message-wrap]').hidden = !personalised;
           this.personalised.disabled = !enabled;
@@ -409,14 +457,14 @@
           this.querySelector('[data-message-count]').textContent = this.message.value.length;
           this.renderStatus();
           const attributes = this.attributes();
-          const keys = { order: 'Gift order', wrapping: 'Gift wrapping', card: 'Gift card', message: 'Gift message' };
+          const keys = { order: 'Gift order', wrapping: 'Gift wrapping', card: 'Gift card', message: 'Gift message', packaging: 'Packaging preference' };
           for (const [output, key] of Object.entries(keys)) {
             this.querySelector(`[data-output="${output}"]`).value = attributes[key];
           }
         }
         renderStatus() {
           const show = this.saveState === 'error' ||
-            (this.enabled.checked && this.personalised.checked && Boolean(this.saveState));
+            Boolean(this.saveState);
           this.status.hidden = !show;
           this.status.textContent = show ? (this.dataset[this.saveState] || '') : '';
           this.retry.hidden = this.saveState !== 'error';
@@ -539,6 +587,15 @@
       "unit": "ch",
       "label": "Maximum message length",
       "default": 150
+    },
+    {
+      "type": "text", "id": "packaging_label", "label": "Fewer boxes label", "default": "Use fewer boxes"
+    },
+    {
+      "type": "textarea", "id": "packaging_help", "label": "Fewer boxes description", "default": "Where possible, group my items in fewer boxes. Each item remains individually protected."
+    },
+    {
+      "type": "text", "id": "packaging_gift_help", "label": "Gift packaging explanation", "default": "Gift orders are individually packaged."
     },
     {
       "type": "range",

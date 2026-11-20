@@ -186,3 +186,40 @@ test('desktop drawer sorting keeps selected facets and uses one current sort val
   assert.deepEqual([...result.searchParams.getAll('sort_by')],['price-ascending']);
   dom.window.close();
 });
+
+test('sticky responds to grid and viewport geometry after filtering and resizing',async()=>{
+  const dom=environment(),w=dom.window;
+  w.document.body.innerHTML='<product-catalog data-sticky="both"><div class="collection-context--navigation"></div><aside class="facets-wrapper"></aside><ul id="product-grid"></ul></product-catalog>';
+  const catalog=w.document.querySelector('product-catalog');
+  let gridHeight=400;
+  catalog.querySelector('#product-grid').getBoundingClientRect=()=>({height:gridHeight});
+  catalog.querySelector('.collection-context--navigation').getBoundingClientRect=()=>({height:50});
+  catalog.querySelector('.facets-wrapper').getBoundingClientRect=()=>({height:60});
+  w.innerHeight=800;
+  await tick();
+  assert.equal(catalog.dataset.stickyEligible,'false');
+  gridHeight=1000;catalog.observeContent();await tick();
+  assert.equal(catalog.dataset.stickyEligible,'true');
+  assert.equal(catalog.style.getPropertyValue('--catalog-nav-height'),'50px');
+  w.innerHeight=1300;w.dispatchEvent(new w.Event('resize'));await tick();
+  assert.equal(catalog.dataset.stickyEligible,'false');
+  assert.equal(catalog.style.getPropertyValue('--catalog-nav-height'),'0px');
+  dom.window.close();
+});
+test('navigation arrows follow overflow and scroll by a useful distance',async()=>{
+  const dom=environment(),w=dom.window;
+  w.eval(script(fs.readFileSync('snippets/collection-context.liquid','utf8')));
+  w.document.body.innerHTML='<collection-navigation><ul class="collection-context__links"><li><a href="#one">One</a></li><li><a href="#two">Two</a></li></ul><button data-direction="-1"></button><button data-direction="1"></button></collection-navigation>';
+  const nav=w.document.querySelector('collection-navigation'),ul=nav.querySelector('ul'),buttons=nav.querySelectorAll('button');
+  let left=0;
+  ul.getBoundingClientRect=()=>({left:0,right:300});
+  Object.defineProperty(ul,'clientWidth',{value:300});
+  ul.children[0].getBoundingClientRect=()=>({left,right:left+200});
+  ul.children[1].getBoundingClientRect=()=>({left:left+220,right:left+500});
+  let requested;ul.scrollBy=options=>{requested=options.left;};
+  await tick();assert.equal(buttons[0].hidden,true);assert.equal(buttons[1].hidden,false);
+  buttons[1].click();assert.equal(requested,225);
+  left=-200;ul.dispatchEvent(new w.Event('scroll'));
+  assert.equal(buttons[0].hidden,false);assert.equal(buttons[1].hidden,true);
+  dom.window.close();
+});
