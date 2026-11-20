@@ -36,8 +36,11 @@
   </a>
 </product-card-gallery>
 {% if count > 1 and settings.card_gallery_scrollbar != false %}
-  <div class="product-card-gallery__scrollbar" style="--gallery-count:{{ count }};--gallery-index:0" hidden>
+  <div class="product-card-gallery__scrollbar{% if settings.card_gallery_indicator_style == 'steps' %} product-card-gallery__scrollbar--steps{% endif %}" style="--gallery-count:{{ count }};--gallery-index:0" hidden>
     <span class="product-card-gallery__thumb" aria-hidden="true"></span>
+    {% if settings.card_gallery_indicator_style == 'steps' %}
+      <span class="product-card-gallery__steps" aria-hidden="true">{% for item in images limit: 3 %}<span data-gallery-step="{{ forloop.index0 }}"{% if forloop.first %} class="is-active"{% endif %}></span>{% endfor %}</span>
+    {% endif %}
     <input type="range" min="1" max="{{ count }}" step="1" value="1" aria-controls="{{ gallery_id }}" aria-label="{{ 'sections.slideshow.load_slide' | t | escape }}" aria-valuetext="1 / {{ count }}">
   </div>
 {% endif %}
@@ -60,6 +63,7 @@
 .product-card-gallery__controls svg {display:block;width:10px;height:6px;transform:rotate(-90deg)}
 .product-card-gallery__controls [data-step="-1"] svg {transform:rotate(90deg)}
 .product-card-gallery__scrollbar {position:absolute;z-index:3;inset-inline:var(--image-padding,0px);bottom:var(--image-padding,0px);height:2px;background:transparent;opacity:0;pointer-events:none;transition:opacity 220ms ease}
+.product-card-gallery__scrollbar--steps {inset-inline:50% auto;bottom:calc(var(--image-padding,0px) + .8rem);width:calc(var(--gallery-count) * 28px);height:24px;transform:translateX(-50%)}
 .product-card-gallery__scrollbar[hidden] {display:none}
 @media(hover:hover) and (pointer:fine) and (min-width:750px){
   .card-wrapper:hover .product-card-gallery__scrollbar {opacity:1;pointer-events:auto}
@@ -68,6 +72,11 @@
 @media(prefers-reduced-motion:reduce){.product-card-gallery__scrollbar {transition:none}}
 .product-card-gallery__thumb {display:block;height:100%;width:calc(100% / var(--gallery-count));background:rgb(var(--color-foreground));transform:translateX(calc(var(--gallery-index) * 100%));transition:transform 350ms ease}
 @media(prefers-reduced-motion:reduce){.product-card-gallery__thumb {transition:none}}
+.product-card-gallery__scrollbar--steps .product-card-gallery__thumb {display:none}
+.product-card-gallery__steps {display:flex;align-items:center;height:100%}
+.product-card-gallery__steps > span {display:block;flex:1;padding:0 6px}
+.product-card-gallery__steps > span::after {content:'';display:block;height:1px;background:rgba(var(--color-foreground),.2)}
+.product-card-gallery__steps > .is-active::after {background:rgb(var(--color-foreground))}
 .product-card-gallery__scrollbar input {position:absolute;inset-inline:0;bottom:0;width:100%;height:24px;margin:0;opacity:0;cursor:ew-resize;touch-action:pan-x}
 .product-card-gallery__scrollbar:focus-within {outline:2px solid rgb(var(--color-foreground));outline-offset:3px}
 {% endstylesheet %}
@@ -110,7 +119,7 @@ if (!customElements.get('product-card-gallery')) {
         if(image.decode)await image.decode().catch(()=>{});
         if(request!==version||!this.isConnected)return;
         slides.forEach((slide,i)=>{slide.classList.toggle('is-active',i===index);slide.classList.toggle('is-inactive',i!==index);slide.setAttribute('aria-hidden',String(i!==index));});
-        if(range){range.value=String(index+1);range.setAttribute('aria-valuetext',`${index+1} / ${count}`);scrollbar.style.setProperty('--gallery-index',index);}
+        if(range){range.value=String(index+1);range.setAttribute('aria-valuetext',`${index+1} / ${count}`);scrollbar.style.setProperty('--gallery-index',index);scrollbar.querySelectorAll('[data-gallery-step]').forEach((step,i)=>step.classList.toggle('is-active',i===index));}
       };
       controls.hidden=false;
       if(scrollbar)scrollbar.hidden=false;

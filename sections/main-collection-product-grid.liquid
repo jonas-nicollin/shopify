@@ -12,6 +12,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 {{ 'template-collection.css' | asset_url | stylesheet_tag }}
 {{ 'component-card.css' | asset_url | stylesheet_tag }}
 {{ 'component-price.css' | asset_url | stylesheet_tag }}
+{% if section.settings.image_shape == 'blob' %}{{ 'mask-blobs.css' | asset_url | stylesheet_tag }}{% endif %}
+{% if section.settings.image_shape == 'arch' %}{{ 'mask-arch.svg' | inline_asset_content }}{% endif %}
 
 
 {%- unless section.settings.quick_add == 'none' -%}
@@ -44,7 +46,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   }
 {%- endstyle -%}
 
-<editorial-catalog class="catalog-grid{% if section.settings.full_width %} catalog-grid--full-width{% endif %} section-{{ section.id }}-padding gradient color-{{ section.settings.color_scheme }}" data-section="{{ section.id }}" data-sticky="{{ section.settings.sticky_filters }}" data-count="{{ section.settings.show_product_count }}" data-lazy="{{ section.settings.enable_lazy_load }}" data-autoplay="{{ section.settings.editorial_video_autoplay }}" style="--catalog-mobile:{{ section.settings.columns_mobile }};--catalog-desktop:{{ section.settings.columns_desktop }};--catalog-span:{{ section.settings.columns_desktop | at_most: 2 }}">
+<product-catalog class="catalog-grid{% if section.settings.full_width %} catalog-grid--full-width{% endif %} section-{{ section.id }}-padding gradient color-{{ section.settings.color_scheme }}" data-section="{{ section.id }}" data-sticky="{{ section.settings.sticky_filters }}" data-count="{{ section.settings.show_product_count }}" data-pagination="{{ section.settings.enable_pagination }}" data-autoplay="{{ section.settings.editorial_video_autoplay }}" style="--catalog-mobile:{{ section.settings.columns_mobile }};--catalog-desktop:{{ section.settings.columns_desktop }};--catalog-span:{{ section.settings.columns_desktop | at_most: 2 }}">
   {%- paginate collection.products by section.settings.products_per_page -%}
     <div class="catalog-grid__layout{% if section.settings.filter_type == 'vertical' %} facets-vertical{% endif %} page-width">
       {{ 'component-facets.css' | asset_url | stylesheet_tag }}
@@ -87,15 +89,15 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                     assign editorial = true
                   endif
                   assign lazy_load = true
-                  if forloop.index <= section.settings.columns_desktop or section.settings.enable_lazy_load == false
+                  if forloop.index <= section.settings.columns_desktop
                     assign lazy_load = false
                   endif
                 %}
                 {% if editorial %}
                   {% liquid
                     assign media = product.images[1] | default: product.featured_image
-                    assign override = product.metafields[section.settings.editorial_namespace][section.settings.editorial_key].value
-                    assign override_media = override[section.settings.editorial_field].value
+                    assign override = product.metafields.custom.editorial_media.value
+                    assign override_media = override.media.value
                     if override_media.media_type == 'image' or override_media.media_type == 'video'
                       assign media = override_media
                     endif
@@ -118,26 +120,29 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                   {% endif %}
                 {% endif %}
                 <li class="grid__item" data-catalog-item data-product="{{ product.id }}">
-                  {% render 'card-product', card_product: product, media_aspect_ratio: section.settings.image_ratio, show_secondary_image: secondary_hover, show_vendor: section.settings.show_vendor, show_rating: section.settings.show_rating, lazy_load: lazy_load, skip_styles: skip_card_product_styles, quick_add: section.settings.quick_add, section_id: section.id, desktop_columns: section.settings.columns_desktop, mobile_columns: section.settings.columns_mobile %}
+                  {% render 'card-product', card_product: product, media_aspect_ratio: section.settings.image_ratio, image_shape: section.settings.image_shape, show_secondary_image: secondary_hover, show_vendor: section.settings.show_vendor, show_rating: section.settings.show_rating, lazy_load: lazy_load, skip_styles: skip_card_product_styles, quick_add: section.settings.quick_add, section_id: section.id, desktop_columns: section.settings.columns_desktop, mobile_columns: section.settings.columns_mobile %}
                 </li>
                 {% assign skip_card_product_styles = true %}
               {% endfor %}
             </ul>
-            {% if paginate.next %}<div class="catalog-grid__pagination"><a class="button button--secondary" data-catalog-next href="{{ paginate.next.url | escape }}">{{ 'general.pagination.next' | t }}</a></div>{% endif %}
+            {% if section.settings.enable_pagination %}
+              {% if paginate.pages > 1 %}{% render 'pagination', paginate: paginate, anchor: '' %}{% endif %}
+            {% elsif paginate.next %}
+              <div class="catalog-grid__pagination"><a class="button button--secondary" data-catalog-next href="{{ paginate.next.url | escape }}">{{ 'general.pagination.next' | t }}</a></div>
+            {% endif %}
           </div>
         {% endif %}
       </div>
     </div>
     <span class="visually-hidden" data-catalog-status role="status" aria-live="polite"></span>
   {% endpaginate %}
-</editorial-catalog>
+</product-catalog>
 
 {% stylesheet %}
 .catalog-grid {display:block}
 .catalog-grid__layout {position:relative}
-.catalog-grid--full-width > .catalog-grid__layout {max-width:none;padding-inline:0}
-.catalog-grid--full-width .facets-wrapper {padding-inline:1.5rem}
-@media(min-width:750px){.catalog-grid--full-width .facets-wrapper {padding-inline:5rem}}
+.catalog-grid--full-width > .catalog-grid__layout {max-width:none;padding-inline:1.5rem}
+@media(min-width:750px) and (max-width:989px){.catalog-grid--full-width > .catalog-grid__layout {padding-inline:5rem}}
 .shopify-section:has(.catalog-grid .mobile-facets__disclosure[open]) {position:relative;z-index:100}
 .catalog-grid .facets-wrapper {background:rgb(var(--color-background));align-self:start}
 @media(max-width:749px){
@@ -165,7 +170,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 .catalog-grid img[data-catalog-reveal] {animation:catalog-media-reveal 650ms cubic-bezier(.2,.65,.3,1) both}
 @keyframes catalog-media-reveal {from {opacity:0} to {opacity:1}}
 @media(prefers-reduced-motion:reduce){.catalog-grid img[data-catalog-reveal] {animation:none}}
-.catalog-grid .catalog-grid__editorial {position:relative;grid-column:1/-1;overflow:hidden;aspect-ratio:4/3;background:rgba(var(--color-foreground),.03)}
+.catalog-grid .catalog-grid__editorial {position:relative;grid-column:1/-1;overflow:hidden;aspect-ratio:3/4;background:rgba(var(--color-foreground),.03)}
 @media(min-width:990px){
   .catalog-grid .catalog-grid__editorial {grid-column:span var(--catalog-span);grid-row:span 2;aspect-ratio:auto;min-height:200px}
   .catalog-grid .catalog-grid__editorial[data-side="0"] {grid-column:calc(-1 - var(--catalog-span))/-1}
@@ -177,14 +182,15 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 .catalog-grid__video-toggle {position:absolute;inset:auto 1rem 1rem auto;z-index:1;width:44px;height:44px;border:0;background:rgba(var(--color-background),.85);color:rgb(var(--color-foreground));cursor:pointer}
 .catalog-grid__video-toggle svg {width:14px;height:14px}
 .catalog-grid__video-toggle [hidden] {display:none}
+.catalog-grid[data-pagination="true"] .pagination__list {display:flex}
 .catalog-grid__pagination {text-align:center;margin:2rem auto}
 .catalog-grid__pagination [aria-busy="true"] {opacity:.5;pointer-events:none}
 @media(prefers-reduced-motion:reduce){.catalog-grid #ProductGridContainer {transition:none}}
 {% endstylesheet %}
 
 {% javascript %}
-if (!customElements.get('editorial-catalog')) {
-  customElements.define('editorial-catalog', class extends HTMLElement {
+if (!customElements.get('product-catalog')) {
+  customElements.define('product-catalog', class extends HTMLElement {
     connectedCallback() { this.frame = requestAnimationFrame(() => this.mount()); }
     disconnectedCallback() {
       cancelAnimationFrame(this.frame); cancelAnimationFrame(this.offsetFrame); clearTimeout(this.timer);
@@ -195,6 +201,20 @@ if (!customElements.get('editorial-catalog')) {
     mount() {
       this.events = new AbortController();
       const on = (target, type, fn, options = {}) => target.addEventListener(type,fn,{...options,signal:this.events.signal});
+      // Own Apply/close intent before Dawn's inline handler and any pending filter response.
+      on(this,'click',event => {
+        const drawer=event.target.closest('menu-drawer');
+        if(!drawer)return;
+        const details=drawer.querySelector('.mobile-facets__disclosure');
+        const summary=details?.querySelector('summary');
+        if(event.target.closest('.mobile-facets__footer button,.mobile-facets__close')){
+          event.preventDefault();event.stopPropagation();this.drawerClosing=true;
+          drawer.closeMenuDrawer?.(event,summary);
+          if(details)details.open=false;
+          document.body.classList.remove('overflow-hidden-mobile','overflow-hidden-tablet');
+          if(summary)summary.setAttribute('aria-expanded','false');
+        } else if(event.target.closest('summary')===summary)this.drawerClosing=details.open;
+      },{capture:true});
       on(this,'input',event => {
         if (!event.target.closest('catalog-filters-form')) return;
         clearTimeout(this.timer);
@@ -249,7 +269,7 @@ if (!customElements.get('editorial-catalog')) {
       const requestURL=new URL(url);requestURL.searchParams.set('section_id',this.dataset.section);
       const result=await fetch(requestURL,{signal});if(!result.ok)throw new Error('Section unavailable');
       const page=new DOMParser().parseFromString(await result.text(),'text/html');
-      const section=page.querySelector('editorial-catalog');if(!section)throw new Error('Section missing');return section;
+      const section=page.querySelector('product-catalog');if(!section)throw new Error('Section missing');return section;
     }
     async renderFilters(url,push) {
       this.request?.abort();this.pageRequest?.abort();this.request=new AbortController();
@@ -258,9 +278,9 @@ if (!customElements.get('editorial-catalog')) {
         const section=await this.fetchSection(url,controller.signal);if(controller.signal.aborted||!this.isConnected)return;
         // Read state at completion so closing the mobile drawer during a request stays respected.
         const focus=document.activeElement?.id;
-        const opened=[...this.querySelectorAll('details[open][id]')].map(el=>({id:el.id,submenu:el.classList.contains('menu-opening')}));
+        const opened=[...this.querySelectorAll('details[open][id]')].filter(el=>!this.drawerClosing||!el.closest('menu-drawer')).map(el=>({id:el.id,submenu:el.classList.contains('menu-opening')}));
         const oldDrawer=this.querySelector('menu-drawer');
-        const drawerOpen=!!oldDrawer?.querySelector('details[open]');
+        const drawerOpen=!this.drawerClosing&&!!oldDrawer?.querySelector('details[open]');
         const drawerScroll=oldDrawer?.querySelector('.mobile-facets__main')?.scrollTop||0;
         this.mediaObserver?.disconnect();this.pageObserver?.disconnect();this.videoObserver?.disconnect();
         this.innerHTML=section.innerHTML;
@@ -295,7 +315,7 @@ if (!customElements.get('editorial-catalog')) {
         if(item.querySelector('[data-catalog-video]'))observerSupported?this.mediaObserver.observe(item):this.loadMedia(item);
       });
       const link=this.querySelector('[data-catalog-next]');
-      if(link&&observerSupported){
+      if(link&&observerSupported&&this.dataset.pagination!=='true'){
         if(!this.pageObserver)this.pageObserver=new IntersectionObserver(entries=>{if(entries.some(entry=>entry.isIntersecting))this.loadNext(this.querySelector('[data-catalog-next]'));},{rootMargin:'300px'});
         this.pageObserver.observe(link);
       }
@@ -332,7 +352,7 @@ if (!customElements.get('editorial-catalog')) {
 
 {% schema %}
 {
-  "name": "Editorial product grid",
+  "name": "Product grid",
   "enabled_on": {
     "templates": [
       "collection"
@@ -342,10 +362,17 @@ if (!customElements.get('editorial-catalog')) {
   "class": "section",
   "settings": [
     {
+      "type": "checkbox",
+      "id": "enable_pagination",
+      "label": "Enable pagination",
+      "default": true,
+      "info": "Turn off to load more products as you scroll."
+    },
+    {
       "type": "range",
       "id": "products_per_page",
       "min": 8,
-      "max": 36,
+      "max": 72,
       "step": 4,
       "default": 16,
       "label": "t:sections.main-collection-product-grid.settings.products_per_page.label"
@@ -425,10 +452,52 @@ if (!customElements.get('editorial-catalog')) {
       "label": "t:sections.main-collection-product-grid.settings.image_ratio.label"
     },
     {
+      "type": "select",
+      "id": "image_shape",
+      "options": [
+        {
+          "value": "default",
+          "label": "t:sections.all.image_shape.options__1.label"
+        },
+        {
+          "value": "arch",
+          "label": "t:sections.all.image_shape.options__2.label"
+        },
+        {
+          "value": "blob",
+          "label": "t:sections.all.image_shape.options__3.label"
+        },
+        {
+          "value": "chevronleft",
+          "label": "t:sections.all.image_shape.options__4.label"
+        },
+        {
+          "value": "chevronright",
+          "label": "t:sections.all.image_shape.options__5.label"
+        },
+        {
+          "value": "diamond",
+          "label": "t:sections.all.image_shape.options__6.label"
+        },
+        {
+          "value": "parallelogram",
+          "label": "t:sections.all.image_shape.options__7.label"
+        },
+        {
+          "value": "round",
+          "label": "t:sections.all.image_shape.options__8.label"
+        }
+      ],
+      "default": "default",
+      "label": "t:sections.all.image_shape.label",
+      "info": "t:sections.all.image_shape.info"
+    },
+    {
       "type": "checkbox",
       "id": "show_secondary_image",
       "default": false,
-      "label": "t:sections.main-collection-product-grid.settings.show_secondary_image.label"
+      "label": "t:sections.main-collection-product-grid.settings.show_secondary_image.label",
+      "visible_if": "{{ settings.card_gallery_enabled == false }}"
     },
     {
       "type": "checkbox",
@@ -509,8 +578,32 @@ if (!customElements.get('editorial-catalog')) {
       "default": true
     },
     {
+      "type": "select",
+      "id": "sticky_filters",
+      "label": "Sticky filters",
+      "default": "desktop",
+      "options": [
+        {
+          "value": "off",
+          "label": "Off"
+        },
+        {
+          "value": "desktop",
+          "label": "Desktop"
+        },
+        {
+          "value": "mobile",
+          "label": "Mobile"
+        },
+        {
+          "value": "both",
+          "label": "Desktop and mobile"
+        }
+      ]
+    },
+    {
       "type": "header",
-      "content": "t:sections.main-collection-product-grid.settings.header_mobile.content"
+      "content": "Mobile layout"
     },
     {
       "type": "select",
@@ -553,45 +646,14 @@ if (!customElements.get('editorial-catalog')) {
       "default": 36
     },
     {
-      "type": "select",
-      "id": "sticky_filters",
-      "label": "Sticky filters",
-      "default": "desktop",
-      "options": [
-        {
-          "value": "off",
-          "label": "Off"
-        },
-        {
-          "value": "desktop",
-          "label": "Desktop"
-        },
-        {
-          "value": "mobile",
-          "label": "Mobile"
-        },
-        {
-          "value": "both",
-          "label": "Desktop and mobile"
-        }
-      ]
-    },
-    {
-      "type": "checkbox",
-      "id": "enable_lazy_load",
-      "label": "Lazy load media in this section",
-      "default": true,
-      "info": "Uses browser-native lazy loading, as in Dawn. The first row loads immediately."
-    },
-    {
       "type": "header",
-      "content": "Product editorial media"
+      "content": "Editorial media"
     },
     {
       "type": "checkbox",
       "id": "enable_editorial",
       "label": "Enable editorial media",
-      "default": true
+      "default": false
     },
     {
       "type": "range",
@@ -600,39 +662,21 @@ if (!customElements.get('editorial-catalog')) {
       "min": 4,
       "max": 32,
       "step": 4,
-      "default": 16
-    },
-    {
-      "type": "text",
-      "id": "editorial_namespace",
-      "label": "Product metafield namespace",
-      "default": "custom"
-    },
-    {
-      "type": "text",
-      "id": "editorial_key",
-      "label": "Product metafield key",
-      "default": "editorial_media",
-      "info": "Metaobject reference. Its media field overrides the second product image."
-    },
-    {
-      "type": "text",
-      "id": "editorial_field",
-      "label": "Metaobject media field key",
-      "default": "media",
-      "info": "File reference accepting images and Shopify-hosted videos."
+      "default": 16,
+      "visible_if": "{{ section.settings.enable_editorial }}"
     },
     {
       "type": "checkbox",
       "id": "editorial_video_autoplay",
-      "label": "Autoplay editorial videos (muted)",
+      "label": "Autoplay videos",
       "default": true,
-      "info": "Paused outside the viewport and when reduced motion is requested."
+      "info": "Paused outside the viewport and when reduced motion is requested.",
+      "visible_if": "{{ section.settings.enable_editorial }}"
     }
   ],
   "presets": [
     {
-      "name": "Editorial product grid"
+      "name": "Product grid"
     }
   ]
 }

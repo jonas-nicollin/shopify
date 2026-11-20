@@ -11,7 +11,7 @@ Record the installed component commit and the exact Dawn version per site. Share
 
 ## Component boundaries
 
-The agreed architecture is one shared Dawn card and an optional editorial collection grid. Gallery and scrollbar switches are now global under Theme settings > Product cards; image ratios remain section-specific. The editorial grid is an enhanced main collection grid, with editorial features that can be disabled. Keep its technical filename stable to preserve current template references; a future consolidation with the native grid must explicitly migrate templates and filter/pagination behavior.
+The agreed architecture is one shared Dawn card and one Product grid with optional editorial media. Gallery and indicator settings are global under Theme settings > Product cards; image ratios remain section-specific. Version 0.5 consolidates both former grids under main-collection-product-grid.liquid. Follow the documented template migration while preserving instance IDs, order and merchant settings. Numbered pagination is enabled by default; automatic page loading remains optional.
 
 Featured collection serves a different context: a selected collection/subset, with carousel/view-all options. It shares cards and can share layout controls without becoming the main filtered collection listing.
 

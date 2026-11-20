@@ -1,15 +1,20 @@
 --- a/config/settings_schema.json
 +++ b/config/settings_schema.json
-@@ -155,11 +155,17 @@
-         "type": "range",
+@@ -152,14 +152,17 @@
+     "name": "t:settings_schema.layout.name",
+     "settings": [
+       {
+-        "type": "range",
++        "type": "number",
          "id": "page_width",
-         "min": 1000,
+-        "min": 1000,
 -        "max": 1600,
-+        "max": 3200,
-         "step": 100,
+-        "step": 100,
          "default": 1200,
-         "unit": "px",
-         "label": "t:settings_schema.layout.settings.page_width.label"
+-        "unit": "px",
+-        "label": "t:settings_schema.layout.settings.page_width.label"
++        "label": "t:settings_schema.layout.settings.page_width.label",
++        "info": "Pixels."
 +      },
 +      {
 +        "type": "checkbox",
@@ -19,7 +24,7 @@
        },
        {
          "type": "range",
-@@ -506,6 +512,18 @@
+@@ -506,6 +509,35 @@
          "label": "t:settings_schema.cards.settings.style.label"
        },
        {
@@ -31,8 +36,25 @@
 +      {
 +        "type": "checkbox",
 +        "id": "card_gallery_scrollbar",
-+        "label": "Enable gallery scrollbar",
++        "label": "Show gallery indicator",
 +        "default": true
++      },
++      {
++        "type": "select",
++        "id": "card_gallery_indicator_style",
++        "label": "Indicator style",
++        "options": [
++          {
++            "value": "bar",
++            "label": "Bar"
++          },
++          {
++            "value": "steps",
++            "label": "Steps"
++          }
++        ],
++        "default": "bar",
++        "visible_if": "{{ settings.card_gallery_enabled and settings.card_gallery_scrollbar }}"
 +      },
 +      {
          "type": "range",

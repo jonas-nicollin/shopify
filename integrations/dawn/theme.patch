@@ -5,7 +5,7 @@
          --media-shadow-visible: {% if settings.media_shadow_opacity > 0 %}1{% else %}0{% endif %};
  
 -        --page-width: {{ settings.page_width | divided_by: 10 }}rem;
-+        --page-width: {% if settings.page_full_width %}100%{% else %}{{ settings.page_width | divided_by: 10 }}rem{% endif %};
++        --page-width: {% if settings.page_full_width %}100%{% else %}{{ settings.page_width | default: 1200 | at_least: 320 | divided_by: 10.0 }}rem{% endif %};
          --page-width-margin: {% if settings.page_width == '1600' %}2{% else %}0{% endif %}rem;
  
          --product-card-image-padding: {{ settings.card_image_padding | divided_by: 10.0 }}rem;

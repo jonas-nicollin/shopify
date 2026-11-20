@@ -7,7 +7,7 @@
 - Preserve setting IDs and existing merchant configuration. Document migrations and host-theme dependencies.
 - Current integration target: Dawn 15.2.0. Validate theme upgrades separately.
 - Test filters, pagination and media on the actual draft at desktop and mobile widths. Distinguish emulation and unit tests from physical-device testing.
-- Use Dawn's shared `card-product` snippet, with optional capabilities. Do not maintain a competing product-card implementation. The editorial collection grid remains an optional section.
+- Use Dawn's shared `card-product` snippet, with optional capabilities. Do not maintain a competing product-card implementation. Use one Product grid section with optional editorial media; its consolidation was requested on 20 November 2026.
 - Shared-card gallery and scrollbar activation belong to Theme settings > Product cards. This global migration was explicitly requested on 19 November 2026. Validate affected callers; do not add competing per-section gallery toggles.
 - Keep reusable modules and small host integration patches in this repository; use Shopify as the working theme. A private complete-theme repository is optional. Always preserve an exact draft backup before upgrades. Never upload merchant settings, client assets or a complete client theme to this public library.
 - Track the exact upstream Dawn version and review upgrades in a separate draft. The published theme and latest Dawn release are references, not backups of the current draft.

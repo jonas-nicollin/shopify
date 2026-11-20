@@ -1,10 +1,17 @@
 {% comment %}
   Editorial Dispatch
-  Manual image/link dispatch slider.
+  Collection dispatch slider with optional image, title and link overrides.
 {% endcomment %}
 
 {% liquid
   assign media_ratio = section.settings.media_ratio | default: '3-4'
+  capture image_sizes
+    echo '(max-width: 989px) '
+    echo section.settings.mobile_width
+    echo 'px, '
+    echo section.settings.desktop_width
+    echo 'px'
+  endcapture
 %}
 
 <section
@@ -29,22 +36,28 @@
         <div class="editorial-dispatch__slider" data-editorial-dispatch-slider>
           <ul class="editorial-dispatch__list" role="list">
             {% for block in section.blocks %}
+              {% liquid
+                assign selected_collection = block.settings.collection
+                assign item_title = block.settings.title | default: selected_collection.title
+                assign item_image = block.settings.image | default: selected_collection.featured_image
+                assign item_link = block.settings.link | default: selected_collection.url
+              %}
               <li class="editorial-dispatch__item" {{ block.shopify_attributes }}>
-                {% if block.settings.link != blank %}
-                  <a href="{{ block.settings.link }}" class="editorial-dispatch__link">
+                {% if item_link != blank %}
+                  <a href="{{ item_link | escape }}" class="editorial-dispatch__link">
                 {% else %}
                   <div class="editorial-dispatch__link">
                 {% endif %}
 
                   <div class="editorial-dispatch__image-wrap">
-                    {% if block.settings.image != blank %}
+                    {% if item_image != blank %}
   {{
-    block.settings.image
+    item_image
     | image_url: width: 800
     | image_tag:
       loading: 'lazy',
       widths: '120, 180, 240, 320, 440, 600, 800',
-      sizes: '(max-width: 989px) 90px, 160px',
+      sizes: image_sizes,
       class: 'editorial-dispatch__image'
   }}
 {% else %}
@@ -52,13 +65,13 @@
 {% endif %}
                   </div>
 
-                  {% if block.settings.title != blank %}
+                  {% if item_title != blank %}
                     <div class="editorial-dispatch__title">
-                      {{ block.settings.title }}
+                      {{ item_title | escape }}
                     </div>
                   {% endif %}
 
-                {% if block.settings.link != blank %}
+                {% if item_link != blank %}
                   </a>
                 {% else %}
                   </div>
@@ -268,15 +281,42 @@
       "label": "Image ratio",
       "default": "3-4",
       "options": [
-        { "value": "1-1", "label": "1:1" },
-        { "value": "3-2", "label": "3:2" },
-        { "value": "2-3", "label": "2:3" },
-        { "value": "4-3", "label": "4:3" },
-        { "value": "3-4", "label": "3:4" },
-        { "value": "5-4", "label": "5:4" },
-        { "value": "4-5", "label": "4:5" },
-        { "value": "16-9", "label": "16:9" },
-        { "value": "9-16", "label": "9:16" }
+        {
+          "value": "1-1",
+          "label": "1:1"
+        },
+        {
+          "value": "3-2",
+          "label": "3:2"
+        },
+        {
+          "value": "2-3",
+          "label": "2:3"
+        },
+        {
+          "value": "4-3",
+          "label": "4:3"
+        },
+        {
+          "value": "3-4",
+          "label": "3:4"
+        },
+        {
+          "value": "5-4",
+          "label": "5:4"
+        },
+        {
+          "value": "4-5",
+          "label": "4:5"
+        },
+        {
+          "value": "16-9",
+          "label": "16:9"
+        },
+        {
+          "value": "9-16",
+          "label": "9:16"
+        }
       ]
     },
     {
@@ -336,20 +376,27 @@
       "name": "Dispatch item",
       "settings": [
         {
+          "type": "collection",
+          "id": "collection",
+          "label": "Collection"
+        },
+        {
           "type": "image_picker",
           "id": "image",
-          "label": "Image"
+          "label": "Image",
+          "info": "Leave blank to use the collection image."
         },
         {
           "type": "text",
           "id": "title",
           "label": "Title",
-          "default": "Title"
+          "info": "Leave blank to use the collection title."
         },
         {
           "type": "url",
           "id": "link",
-          "label": "Link"
+          "label": "Link",
+          "info": "Leave blank to link to the collection."
         }
       ]
     }
@@ -362,22 +409,13 @@
       },
       "blocks": [
         {
-          "type": "dispatch_item",
-          "settings": {
-            "image": "shopify://shop_images/placeholder.png"
-          }
+          "type": "dispatch_item"
         },
         {
-          "type": "dispatch_item",
-          "settings": {
-            "image": "shopify://shop_images/placeholder.png"
-          }
+          "type": "dispatch_item"
         },
         {
-          "type": "dispatch_item",
-          "settings": {
-            "image": "shopify://shop_images/placeholder.png"
-          }
+          "type": "dispatch_item"
         }
       ]
     }

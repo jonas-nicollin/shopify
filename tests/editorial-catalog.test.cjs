@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { JSDOM } = require('jsdom');
-const section = fs.readFileSync('sections/main-collection-editorial-grid.liquid', 'utf8');
+const section = fs.readFileSync('sections/main-collection-product-grid.liquid', 'utf8');
 const gallery = fs.readFileSync('snippets/product-card-gallery.liquid', 'utf8');
 const script = source => source.match(/{% javascript %}([\s\S]*?){% endjavascript %}/)[1];
 const tick = () => new Promise(resolve => setTimeout(resolve, 30));
@@ -79,8 +79,8 @@ test('header height preserves its visible-section contract without a mutation fe
 
 test('filter requests preserve repeated facets and only submit the active desktop/mobile form set', async () => {
   const dom=environment(),w=dom.window;
-  w.document.body.innerHTML='<editorial-catalog data-section="test"><catalog-filters-form><form id="desktop"><input name="filter.color" value="red"><input name="filter.color" value="blue"></form></catalog-filters-form><catalog-filters-form><form id="sort"><input name="sort_by" value="price-ascending"></form></catalog-filters-form><catalog-filters-form><form id="FacetFiltersFormMobile"><input name="filter.color" value="green"></form></catalog-filters-form></editorial-catalog>';
-  await tick();const root=w.document.querySelector('editorial-catalog');let result;
+  w.document.body.innerHTML='<product-catalog data-section="test"><catalog-filters-form><form id="desktop"><input name="filter.color" value="red"><input name="filter.color" value="blue"></form></catalog-filters-form><catalog-filters-form><form id="sort"><input name="sort_by" value="price-ascending"></form></catalog-filters-form><catalog-filters-form><form id="FacetFiltersFormMobile"><input name="filter.color" value="green"></form></catalog-filters-form></product-catalog>';
+  await tick();const root=w.document.querySelector('product-catalog');let result;
   root.renderFilters=url=>{result=url;};root.submitFilters(w.document.querySelector('#desktop'));
   assert.deepEqual([...result.searchParams.getAll('filter.color')],['red','blue']);assert.equal(result.searchParams.get('sort_by'),'price-ascending');
   root.submitFilters(w.document.querySelector('#FacetFiltersFormMobile'));
@@ -90,8 +90,8 @@ test('filter requests preserve repeated facets and only submit the active deskto
 
 test('native image loading remains intact and filter replacement cancels an obsolete request', async () => {
   const dom=environment(),w=dom.window;
-  w.document.body.innerHTML='<editorial-catalog data-section="test"><div data-catalog-item><img src="/native.jpg" loading="lazy"></div><span data-catalog-status></span></editorial-catalog>';
-  await tick();const root=w.document.querySelector('editorial-catalog');
+  w.document.body.innerHTML='<product-catalog data-section="test"><div data-catalog-item><img src="/native.jpg" loading="lazy"></div><span data-catalog-status></span></product-catalog>';
+  await tick();const root=w.document.querySelector('product-catalog');
   assert.equal(root.querySelector('img').getAttribute('src'),'/native.jpg');
   assert.equal(root.querySelector('img').getAttribute('loading'),'lazy');
   assert.equal(root.querySelector('[data-catalog-item]').hasAttribute('data-reveal'),false);
@@ -100,7 +100,7 @@ test('native image loading remains intact and filter replacement cancels an obso
   const first=root.renderFilters(new w.URL('https://example.com/collections/all?filter.color=red'),true);
   const second=root.renderFilters(new w.URL('https://example.com/collections/all?filter.color=blue'),true);
   assert.equal(pending[0].signal.aborted,true);
-  const response=count=>{const el=w.document.createElement('editorial-catalog');el.innerHTML=`<span id="ProductCount">${count}</span><span data-catalog-status></span>`;return el;};
+  const response=count=>{const el=w.document.createElement('product-catalog');el.innerHTML=`<span id="ProductCount">${count}</span><span data-catalog-status></span>`;return el;};
   pending[1].resolve(response('Blue results'));await second;
   pending[0].resolve(response('Red results'));await first;
   assert.equal(root.querySelector('#ProductCount').textContent,'Blue results');assert.equal(root.hasAttribute('aria-busy'),false);assert.equal(w.location.search,'?filter.color=blue');
@@ -109,15 +109,52 @@ test('native image loading remains intact and filter replacement cancels an obso
 
 test('next-page loading appends products once and retains a navigation fallback on failure', async () => {
   const dom=environment(),w=dom.window;
-  w.document.body.innerHTML='<editorial-catalog data-section="test"><ul id="product-grid"><li data-product="1"></li></ul><div><a data-catalog-next href="?page=2">Next</a></div></editorial-catalog>';
-  await tick();const root=w.document.querySelector('editorial-catalog'),link=root.querySelector('a');let finish,calls=0;
+  w.document.body.innerHTML='<product-catalog data-section="test"><ul id="product-grid"><li data-product="1"></li></ul><div><a data-catalog-next href="?page=2">Next</a></div></product-catalog>';
+  await tick();const root=w.document.querySelector('product-catalog'),link=root.querySelector('a');let finish,calls=0;
   root.fetchSection=()=>{calls++;return new Promise(resolve=>finish=resolve);};
   const first=root.loadNext(link);await root.loadNext(link);assert.equal(calls,1);
-  const response=w.document.createElement('editorial-catalog');response.innerHTML='<ul id="product-grid"><li data-product="2"></li></ul><div><a data-catalog-next href="?page=3">Next</a></div>';
+  const response=w.document.createElement('product-catalog');response.innerHTML='<ul id="product-grid"><li data-product="2"></li></ul><div><a data-catalog-next href="?page=3">Next</a></div>';
   finish(response);await first;assert.equal(root.querySelectorAll('li').length,2);assert.equal(new URL(link.href).search,'?page=3');
   root.fetchSection=async()=>{throw new Error('offline');};await root.loadNext(link);assert.equal(link.isConnected,true);assert.equal(link.dataset.retry,'true');assert.equal(link.hasAttribute('aria-busy'),false);
   const click=new w.MouseEvent('click',{bubbles:true,cancelable:true});
   let nativeFallback=false;w.document.addEventListener('click',event=>{nativeFallback=!event.defaultPrevented;event.preventDefault();},{once:true});
   link.dispatchEvent(click);assert.equal(nativeFallback,true);
   dom.window.close();
+});
+
+
+test('step indicator follows swipe, range and keyboard navigation', async () => {
+  const dom=environment(),w=dom.window;
+  w.document.body.innerHTML='<div class="card__media"><div class="product-card-gallery__controls"><button data-step="1"></button></div><product-card-gallery><a href="/products/one"><img src="/one.jpg"><template><img src="/two.jpg"></template><template><img src="/three.jpg"></template></a></product-card-gallery><div class="product-card-gallery__scrollbar product-card-gallery__scrollbar--steps"><span data-gallery-step="0" class="is-active"></span><span data-gallery-step="1"></span><span data-gallery-step="2"></span><input type="range" min="1" max="3" value="1"></div></div>';
+  await tick();const link=w.document.querySelector('product-card-gallery a');
+  pointer(w,link,'pointerdown',200,100);pointer(w,link,'pointerup',80,100);await tick();
+  assert.equal(w.document.querySelector('[data-gallery-step].is-active').dataset.galleryStep,'1');
+  const range=w.document.querySelector('input');range.value='3';range.dispatchEvent(new w.Event('input',{bubbles:true}));await tick();
+  assert.equal(w.document.querySelectorAll('[data-gallery-step].is-active').length,1);
+  assert.equal(w.document.querySelector('[data-gallery-step].is-active').dataset.galleryStep,'2');
+  link.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));await tick();
+  assert.equal(w.document.querySelector('[data-gallery-step].is-active').dataset.galleryStep,'0');
+  dom.window.close();
+});
+
+test('numbered pagination is never intercepted by the automatic page loader', async () => {
+  const dom=environment(),w=dom.window;
+  w.document.body.innerHTML='<product-catalog data-section="test" data-pagination="true"><ul id="product-grid"><li></li></ul><nav class="pagination"><a href="?page=2">2</a></nav></product-catalog>';
+  await tick();const root=w.document.querySelector('product-catalog');let loads=0;root.loadNext=()=>loads++;
+  let native=false;w.document.addEventListener('click',event=>{native=!event.defaultPrevented;event.preventDefault();},{once:true});root.querySelector('a').click();
+  assert.equal(native,true);assert.equal(loads,0);
+  dom.window.close();
+});
+
+
+test('Apply keeps a mobile drawer closed when an in-flight filter response arrives', async () => {
+  const dom=environment(),w=dom.window;
+  w.document.body.innerHTML='<product-catalog><menu-drawer><details id="drawer" class="mobile-facets__disclosure menu-opening" open><summary>Filters</summary><div class="mobile-facets__footer"><button>Apply</button></div></details></menu-drawer><span data-catalog-status></span></product-catalog>';
+  await tick();const root=w.document.querySelector('product-catalog');const drawer=root.querySelector('menu-drawer');
+  drawer.closeMenuDrawer=()=>{drawer.querySelector('details').classList.remove('menu-opening');};
+  let finish;root.fetchSection=()=>new Promise(resolve=>finish=resolve);
+  const pending=root.renderFilters(new w.URL('https://example.com/collections/all?filter=1'),true);
+  root.querySelector('button').click();assert.equal(root.drawerClosing,true);
+  const response=w.document.createElement('product-catalog');response.innerHTML='<menu-drawer><details id="drawer" class="mobile-facets__disclosure"><summary>Filters</summary></details></menu-drawer><span data-catalog-status></span>';
+  finish(response);await pending;assert.equal(root.querySelector('details').open,false);dom.window.close();
 });
