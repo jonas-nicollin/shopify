@@ -32,6 +32,8 @@ Gallery activation now belongs to Theme settings > Product cards. The previous s
 
 The displayed section name is **Product grid**. Former editorial templates migrate to the canonical native filename; see [v0.5 migration](migration-v5.md). Keep one main grid per template. Featured collection is a separate selection/carousel section and may coexist.
 
+Apply the [v0.7 migration](migration-v7.md) for asynchronous gallery asset registration, rating removal, badge schemes and sticky navigation.
+
 ## Header-height contract
 
 Load once: `{{ 'total-header-height-variable.js' | asset_url | script_tag }}`. It writes `--total-header-height` on the root element, summing the full heights of visible `.shopify-section-group-header-group` sections that intersect the viewport. This preserves the recovered implementation's semantics: it is not a clipped intersection measurement and it is distinct from Dawn's `--header-height`.
@@ -40,7 +42,7 @@ The script observes layout-affecting mutations and scroll/resize. A value compar
 
 ## Badge contract
 
-The badge appears for available products whose `custom.sub_collection.value`, trimmed, equals `One of a kind`. The text, condition and existing mobile appearance are retained. The snippet owns its scoped styles and uses the theme foreground. Do not create or alter product metafields just to install it.
+The badge appears for available products whose `custom.sub_collection.value`, trimmed, equals `One of a kind`. The text and condition are retained. The shared card owns common badge geometry; the unique-item snippet supplies a top-left wrapper and a configurable color scheme. Do not create or alter product metafields just to install it.
 
 ## Three different loading mechanisms
 

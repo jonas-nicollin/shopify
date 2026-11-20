@@ -1,0 +1,14 @@
+# Migration to v0.7
+
+Target remains Dawn 15.2.0. Back up the draft and merge host patches against its actual files. Do not publish as part of installation.
+
+1. Update the shared card, gallery, unique-item badge, collection context and Product grid. Card information resets now exclude badges. All card badges use 1.2rem text, line-height 1, .5rem .75rem padding, .5rem margin, no border and no rounded corners. Unique-item badges have their own top-left wrapper; stock/sale positions and configured colors remain independent.
+2. Apply `unique-badge-scheme.patch`. The new `unique_badge_color_scheme` defaults to Dawn's light `scheme-1`; choose the appropriate light scheme in another host. Stock and sale badges retain their existing scheme IDs and values.
+3. **Required for asynchronous cards:** apply `card-gallery-assets.patch` to layout/theme.liquid. Render the gallery once with `assets_only: true`, before the closing head. It emits no card markup and registers the snippet's compiled CSS/JS for pages whose recommendation cards arrive later. Keep the gallery's CSS/JS in its snippet, without a second copy in base.css.
+4. The existing `show_secondary_image` setting is available with either gallery mode. In gallery mode, fine-pointer hover temporarily shows the second image and restores the prior image on leaving. Arrow, range and keyboard interactions commit the chosen image. Touch input does not activate hover.
+5. Apply `card-rating-removal.patch` to Featured collection, Search and Related products, and `product-rating-removal.patch` to product sections. The Product grid and shared card already remove their rating setting/rendering. Remove any configured rating blocks before applying the product schema change; none should be left in JSON templates. Obsolete `show_rating` values and unused Dawn translations/assets are inert and may remain until normal theme cleanup. Review metadata supplied by third-party review apps separately.
+6. Navigation is a sticky sibling of the heading and grid, bounded by Product grid. Only the links stay visible; the title scrolls away. Sticky filters retain their existing setting and sit below the measured navigation height. No navigation menu means zero extra offset. Rebind measurement after filter replacement. Desktop drawer sorting preserves active drawer facets.
+7. Breadcrumb links use 1px underlines offset by 1rem and middle-dot separators. Product collection membership is not modified by this migration.
+8. Editorial media help uses generic namespace/key/field terminology. Existing `editorial_media_path` values and the compatibility default are unchanged.
+
+Temporary filter-layout/pagination settings used for validation must be restored. Gift options and packing policy are outside this migration. Real hosted-video playback and physical-device swipe acceptance require their own evidence.

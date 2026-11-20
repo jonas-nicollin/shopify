@@ -158,3 +158,31 @@ test('Apply keeps a mobile drawer closed when an in-flight filter response arriv
   const response=w.document.createElement('product-catalog');response.innerHTML='<menu-drawer><details id="drawer" class="mobile-facets__disclosure"><summary>Filters</summary></details></menu-drawer><span data-catalog-status></span>';
   finish(response);await pending;assert.equal(root.querySelector('details').open,false);dom.window.close();
 });
+
+test('secondary hover respects its setting, ignores touch and restores the selected image',async()=>{
+  for(const enabled of [true,false]){
+    const dom=environment(),w=dom.window;w.matchMedia=()=>({matches:true});
+    w.document.body.innerHTML=`<div class="card__media"><div class="product-card-gallery__controls"><button data-step="1"></button></div><product-card-gallery data-secondary-hover="${enabled}"><a><img src="/one.jpg"><template><img src="/two.jpg"></template><template><img src="/three.jpg"></template></a></product-card-gallery></div>`;
+    await tick();const media=w.document.querySelector('.card__media'),gallery=media.querySelector('product-card-gallery');
+    const enter=type=>{const e=new w.Event('pointerenter');Object.assign(e,{pointerType:type});media.dispatchEvent(e);};
+    enter('touch');await tick();assert.equal(gallery.querySelectorAll('img').length,1);
+    enter('mouse');await tick();assert.equal(gallery.querySelectorAll('img').length,enabled?2:1);
+    if(enabled)assert.equal(gallery.querySelector('.is-active').getAttribute('src'),'/two.jpg');
+    media.dispatchEvent(new w.Event('pointerleave'));await tick();
+    if(enabled)assert.equal(gallery.querySelector('.is-active').getAttribute('src'),'/one.jpg');
+    media.querySelector('button').click();await tick();media.querySelector('button').click();await tick();
+    enter('mouse');await tick();media.dispatchEvent(new w.Event('pointerleave'));await tick();
+    assert.equal(gallery.querySelector('.is-active').getAttribute('src'),'/three.jpg');
+    dom.window.close();
+  }
+});
+
+test('desktop drawer sorting keeps selected facets and uses one current sort value',async()=>{
+  const dom=environment(),w=dom.window;
+  w.document.body.innerHTML='<product-catalog><catalog-filters-form><form id="FacetFiltersFormMobile"><input type="checkbox" checked name="filter.v.availability" value="0"><input name="sort_by" value="manual"></form></catalog-filters-form><catalog-filters-form><form id="FacetSortDrawerForm"><input name="sort_by" value="price-ascending"></form></catalog-filters-form></product-catalog>';
+  await tick();const root=w.document.querySelector('product-catalog');let result;root.renderFilters=url=>result=url;
+  root.submitFilters(w.document.querySelector('#FacetSortDrawerForm'));
+  assert.equal(result.searchParams.get('filter.v.availability'),'0');
+  assert.deepEqual([...result.searchParams.getAll('sort_by')],['price-ascending']);
+  dom.window.close();
+});

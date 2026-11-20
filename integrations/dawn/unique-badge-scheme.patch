@@ -1,0 +1,15 @@
+--- a/config/settings_schema.json
++++ b/config/settings_schema.json
+@@ -1297,6 +1297,12 @@
+         "id": "sold_out_badge_color_scheme",
+         "label": "t:settings_schema.badges.settings.sold_out_badge_color_scheme.label",
+         "default": "scheme-3"
++      },
++      {
++        "type": "color_scheme",
++        "id": "unique_badge_color_scheme",
++        "label": "Unique item badge color scheme",
++        "default": "scheme-1"
+       }
+     ]
+   },

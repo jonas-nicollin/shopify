@@ -127,7 +127,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                   {% endif %}
                 {% endif %}
                 <li class="grid__item" data-catalog-item data-product="{{ product.id }}">
-                  {% render 'card-product', card_product: product, media_aspect_ratio: section.settings.image_ratio, show_secondary_image: secondary_hover, show_vendor: section.settings.show_vendor, show_rating: section.settings.show_rating, lazy_load: lazy_load, skip_styles: skip_card_product_styles, quick_add: section.settings.quick_add, section_id: section.id, desktop_columns: section.settings.columns_desktop, mobile_columns: section.settings.columns_mobile %}
+                  {% render 'card-product', card_product: product, media_aspect_ratio: section.settings.image_ratio, show_secondary_image: secondary_hover, show_vendor: section.settings.show_vendor, lazy_load: lazy_load, skip_styles: skip_card_product_styles, quick_add: section.settings.quick_add, section_id: section.id, desktop_columns: section.settings.columns_desktop, mobile_columns: section.settings.columns_mobile %}
                 </li>
                 {% assign skip_card_product_styles = true %}
               {% endfor %}
@@ -153,11 +153,11 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 .shopify-section:has(.catalog-grid .mobile-facets__disclosure[open]) {position:relative;z-index:100}
 .catalog-grid .facets-wrapper {background:rgb(var(--color-background));align-self:start}
 @media(max-width:749px){
-  .catalog-grid:is([data-sticky="mobile"],[data-sticky="both"]) .facets-wrapper {position:sticky;top:var(--catalog-top,0px);z-index:2}
+  .catalog-grid:is([data-sticky="mobile"],[data-sticky="both"]) .facets-wrapper {position:sticky;top:calc(var(--catalog-top,0px) + var(--catalog-nav-height,0px));z-index:2}
 }
 @media(min-width:750px){
-  .catalog-grid:is([data-sticky="desktop"],[data-sticky="both"]) .facets-wrapper {position:sticky;top:var(--catalog-top,0px);z-index:2}
-  .catalog-grid .facets-vertical .facets-wrapper {max-height:calc(100dvh - var(--catalog-top,0px));overflow-y:auto}
+  .catalog-grid:is([data-sticky="desktop"],[data-sticky="both"]) .facets-wrapper {position:sticky;top:calc(var(--catalog-top,0px) + var(--catalog-nav-height,0px));z-index:2}
+  .catalog-grid .facets-vertical .facets-wrapper {max-height:calc(100dvh - var(--catalog-top,0px) - var(--catalog-nav-height,0px));overflow-y:auto}
   .catalog-grid .facets-wrapper:has(.mobile-facets__disclosure[open]) {overflow:visible}
 }
 .catalog-grid catalog-filters-form {display:block}
@@ -249,8 +249,10 @@ if (!customElements.get('product-catalog')) {
           if(['sticky','fixed'].includes(getComputedStyle(el).position)&&rect.top<=top+1&&rect.bottom>top)top=rect.bottom;
         }
         this.style.setProperty('--catalog-top',top+'px');
+        this.style.setProperty('--catalog-nav-height',(this.querySelector('.collection-context--navigation')?.getBoundingClientRect().height||0)+'px');
       };
       const queue = () => {if(!this.offsetFrame)this.offsetFrame=requestAnimationFrame(offset);};
+      this.updateOffset=queue;
       if('ResizeObserver' in window){this.resize=new ResizeObserver(queue);bars.forEach(el=>this.resize.observe(el));}
       ['scroll','resize','transitionend'].forEach(type=>on(window,type,queue,{passive:true}));
       offset();this.observeContent();
@@ -267,9 +269,10 @@ if (!customElements.get('product-catalog')) {
         if(min&&max&&min.value&&max.value&&Number(min.value)>Number(max.value))max.value=min.value;
       }
       const mobile=form.id==='FacetFiltersFormMobile';
-      const forms=mobile?[form]:[...this.querySelectorAll('catalog-filters-form form')].filter(item=>item.id!=='FacetFiltersFormMobile');
+      const drawerSort=form.id==='FacetSortDrawerForm';
+      const forms=mobile?[form]:drawerSort?[this.querySelector('#FacetFiltersFormMobile'),form].filter(Boolean):[...this.querySelectorAll('catalog-filters-form form')].filter(item=>item.id!=='FacetFiltersFormMobile');
       const url=new URL(location.href);url.search='';
-      forms.forEach(item=>new FormData(item).forEach((value,key)=>{if(value!=='')url.searchParams.append(key,value);}));
+      forms.forEach(item=>new FormData(item).forEach((value,key)=>{if(value!==''&&!(drawerSort&&item!==form&&key==='sort_by'))url.searchParams.append(key,value);}));
       this.renderFilters(url,true);
     }
     async fetchSection(url,signal) {
@@ -306,6 +309,13 @@ if (!customElements.get('product-catalog')) {
       finally {if(this.request===controller)this.removeAttribute('aria-busy');}
     }
     observeContent() {
+      const navigation=this.querySelector('.collection-context--navigation');
+      if(this.navigation!==navigation){
+        if(this.navigation)this.resize?.unobserve(this.navigation);
+        this.navigation=navigation;
+        if(navigation)this.resize?.observe(navigation);
+        this.updateOffset?.();
+      }
       const items=[...this.querySelectorAll('[data-catalog-item]:not([data-observed])')];
       const observerSupported='IntersectionObserver' in window;
       if(observerSupported&&!this.mediaObserver)this.mediaObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){this.mediaObserver.unobserve(entry.target);this.loadMedia(entry.target);}}),{rootMargin:'500px'});
@@ -462,21 +472,13 @@ if (!customElements.get('product-catalog')) {
       "type": "checkbox",
       "id": "show_secondary_image",
       "default": false,
-      "label": "t:sections.main-collection-product-grid.settings.show_secondary_image.label",
-      "visible_if": "{{ settings.card_gallery_enabled == false }}"
+      "label": "t:sections.main-collection-product-grid.settings.show_secondary_image.label"
     },
     {
       "type": "checkbox",
       "id": "show_vendor",
       "default": false,
       "label": "t:sections.main-collection-product-grid.settings.show_vendor.label"
-    },
-    {
-      "type": "checkbox",
-      "id": "show_rating",
-      "default": false,
-      "label": "t:sections.main-collection-product-grid.settings.show_rating.label",
-      "info": "t:sections.main-collection-product-grid.settings.show_rating.info"
     },
     {
       "type": "select",
@@ -632,7 +634,7 @@ if (!customElements.get('product-catalog')) {
       "id": "editorial_media_path",
       "label": "Product media field",
       "default": "custom.editorial_media.media",
-      "info": "Image or video: custom.editorial_image. Metaobject: custom.editorial_media.media.",
+      "info": "Use namespace.key for an image or video file, or namespace.key.field for a media field in a metaobject.",
       "visible_if": "{{ section.settings.enable_editorial }}"
     },
     {

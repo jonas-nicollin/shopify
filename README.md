@@ -1,104 +1,47 @@
 # Shopify editorial components
 
-Reusable collection grid and product image gallery for **Dawn 15.2.0**. `main` contains the current installable files. This repository is a component library, not a complete Shopify theme.
+Reusable product grids, image galleries and collection navigation for **Dawn 15.2.0**. This repository is a component library, not a complete Shopify theme. The current version is **0.7.0**.
 
-## Installation
+## Install into a draft
 
-Install these seven files together into a draft theme, using the same paths. Review the existing shared card before replacing it, preserving any host customizations:
+Install these files together, preserving existing host customizations:
 
 - `sections/main-collection-product-grid.liquid`
-- `snippets/product-card-gallery.liquid`
 - `snippets/card-product.liquid`
+- `snippets/product-card-gallery.liquid`
 - `snippets/media-aspect-ratio.liquid`
 - `snippets/product-badge-one-of-a-kind.liquid`
 - `snippets/collection-context.liquid`
 - `snippets/collection-path.liquid`
 
-Update the existing **Product grid**. Enable editorial media only where wanted. For former editorial sections, follow [the v0.5 migration](docs/migration-v5.md). Keep one collection grid active. Changes to a template affect every collection assigned to that template. Do not publish the draft before reviewing the storefront.
+Review the small host patches described in [installation](docs/installation.md) and [the v0.7 migration](docs/migration-v7.md). In particular, the gallery needs its layout asset-registration hook so recommendations loaded after the page receive its CSS and JavaScript. Installing a component does not publish the theme.
 
-The section contains its Liquid, schema, CSS and JavaScript. The gallery snippet contains its own markup, CSS and JavaScript; Shopify compiles the `{% stylesheet %}` and `{% javascript %}` blocks. The grid/gallery add no third-party runtime. Optional header-height and legacy Ajaxinate assets are documented separately.
+Each section contains its Liquid, schema, styles and scripts. Reusable snippets contain their own component code. Shopify compiles the stylesheet and JavaScript blocks. The grid and gallery add no third-party browser runtime.
 
-## Editorial media
+## Product grid
 
-The default interval is **16 products**: insert a media tile immediately before products 17, 33, 49, etc. The tile links to that following product. Positions use Shopify's pagination offset, so loading another page does not restart the cadence. Filtering and sorting use the order of the current result set.
+One Product grid supports optional editorial image/video tiles, numbered pagination or automatic loading, horizontal/vertical/drawer filters, sorting, optional product count, configurable columns, image ratios and full-width layout.
 
-Media priority:
+Editorial positions follow the result order and Shopify pagination offset. Configure **Product media field** with `namespace.key` for a direct image/video file, or `namespace.key.field` for a media field in a metaobject. Empty or unsupported values fall back to the product's second image, then its featured image. Hosted Shopify videos are supported; external-video URLs and list references are not.
 
-1. The product field selected in **Product media field**, if it resolves to an image or a Shopify-hosted video.
-2. The product's second image.
-3. Its featured image when no second image exists.
+A dedicated navigation menu supplies one contextual row and product breadcrumbs. The row stays below visible header regions; its title scrolls away. Existing sticky-filter settings determine whether filters remain below it. On mobile, links scroll horizontally. See [the navigation contract](docs/collection-navigation.md).
 
-A product without suitable media produces no editorial tile. On desktop the large tiles alternate left/right, spanning two columns and two rows (the reference layout uses four columns). Below 990 px they occupy a full row at a 3:4 ratio. Cropping follows Shopify image focal points. The interval and desktop/mobile column counts are configurable.
+## Shared product cards
 
-### Product override setup
+Global Product cards settings enable the gallery and choose its optional Bar or Steps indicator. Each gallery shows up to three images, loading extra views on demand. It supports desktop arrows, keyboard navigation, touch swipes and range input. Secondary-image hover remains a per-section setting and works with the gallery enabled. Manual gallery selection takes priority over temporary hover.
 
-Create a metaobject definition `editorial_media`:
+Information text uses a common size and inherited theme typography, with spacing on `card__information`. Badge styling is independent: compact square corners, 1.2rem text, theme color schemes, and a top-left unique-item badge. Stock and sale badges keep their independent schemes. Product rating controls and rendering are removed in v0.7.
 
-| Field key | Type | Purpose |
-| --- | --- | --- |
-| `media` | One file reference, media files only | Image or Shopify-hosted video |
-| `alt` | Single line text, optional | Accessible image description |
+The components use Dawn's native prices, quick add, facet markup, accessible drawer, icons, translation keys and color variables. These are Dawn adapters, not a theme-independent replacement. Validate other theme versions separately.
 
-Create the product metafield `custom.editorial_media`, type **one metaobject reference**, restricted to that definition. Make the entries available to the storefront and set them **Active**. Select an entry from the product's **Editorial media** field. An empty reference automatically restores the product-image fallback.
+## Optional modules
 
-In **Product grid > Editorial media > Product media field**, enter one path: `custom.editorial_image` for a direct file reference, or `custom.editorial_media.media` for the metaobject setup above (the default). The namespace, product key and optional metaobject field are combined in one control. Empty, malformed or unsupported fields fall back to product images. A collection section dynamic source cannot select a different product metafield for every iteration of its product loop. Definitions and entries belong to the shop and are not transferred by copying theme files.
-
-Videos load near the viewport, play muted and inline, loop, and pause outside the viewport. A visible play/pause control remains available. Autoplay can be disabled in section settings and is suppressed for `prefers-reduced-motion`. External YouTube/Vimeo URLs are not accepted by this version.
-
-The former collection-level `custom.editorial_tiles` mechanism is replaced by product-driven media. The unused `editorial_image` setting was removed in November 2026. Image shape was removed from Product grid at the merchant’s request in v0.6. Old template JSON may still contain these unused keys until Shopify saves it; no product or media files are deleted. Shape support remains in the shared Dawn card for other sections.
-
-## Loading, filters and gallery
-
-Images use Dawn's browser-native loading approach: real `src` and `srcset` in HTML, the first desktop row eager, and subsequent covers marked `loading="lazy"`. The browser controls when to request those images. The section adds a 650 ms opacity animation only when an image finishes loading later; cached images and product text remain visible immediately. Reduced motion disables the animation. There is no separate media lazy-loading toggle.
-
-Video activation remains section-owned within 500 px of the viewport. The section also owns filtering requests, cancellation, history navigation and next-page requests. With **Enable pagination** on (the default), Dawn displays numbered page links. Turning it off requests the next page within 300 px of its link. Products per page accepts up to 72. A normal next-page link remains available without JavaScript or after an automatic-loading failure. Image loading and page pagination are separate mechanisms.
-
-Filter HTML is rendered by Dawn's `facets` snippet, but its controller tags are renamed in the captured markup. This section does **not** load or invoke `facets.js` or Ajaxinate. It therefore does not inherit store-specific Ajaxinate initialization in an existing `facets.js`. It keeps Dawn's mobile drawer keyboard behavior and raises the drawer and its close control above the header while open.
-
-The **Enable product count** checkbox defaults to enabled and controls desktop and mobile counts. It retains the `show_product_count` setting ID and sits directly below **Enable sorting**. **Enable editorial media** retains the `enable_editorial` ID.
-
-The gallery displays up to three product images, with optional `custom.card_images` curation. Dawn's shared `card-product` renders it directly when **Theme settings > Product cards > Enable card gallery** is enabled, preserving prices, badges and quick add. This applies to every caller of the shared card. The legacy render argument is only a fallback when the global setting has not been installed. There is no client-side replacement of native card markup.
-
-Extra images load on demand, crossfade for 550 ms, and support touch swipes and keyboard arrow keys. Dawn's small `icon-caret.svg` appears on hover or keyboard focus on desktop, with no background and no visible slide counter. The buttons sit directly inside `card__media`, before the gallery, with 44 px targets; global image padding is applied to the image rather than the controls. Touch layouts hide the arrows. A thin range-based scrollbar supports dragging and keyboard input, appears on hover/focus on desktop and appears for 1.4 seconds after touch interaction on mobile. Only the active segment is colored, using the theme foreground; the remaining track is transparent. **Show gallery indicator** is a separate global checkbox, preserving the `card_gallery_scrollbar` ID. **Indicator style** selects Bar or Steps. Steps uses centered short lines, with inactive lines at 20% of the theme foreground. No Swiper library is required.
-
-Image ratios belong to each section because cropping depends on its content. Global theme settings continue to control card style, spacing, border, color and typography. The ordered formats match Editorial push: **1:1, 3:2, 2:3, 4:3, 3:4, 5:4, 4:5, 16:9, 9:16**, preceded by **Adapt to image**. Existing `square` and `portrait` values remain compatible. Viewport-height presets from Editorial push are intentionally not card ratios.
-
-## Host theme dependencies
-
-| Responsibility | Dependency |
-| --- | --- |
-| Product card content, badges, prices | Dawn `card-product` and the snippets it renders |
-| Filter markup and styling | Dawn `facets`, `price-facet`, swatches and `component-facets.css` |
-| Accessible mobile filter drawer | Dawn `MenuDrawer`, focus helpers and base styles from `global.js` |
-| Card/grid styles, colors, typography, translations | Dawn theme assets, settings and locales |
-| Icons | Dawn `icon-caret.svg`, `icon-play.svg`, `icon-pause.svg` |
-| Quick add and ratings | Corresponding Dawn assets when enabled |
-| Product data, filtering, pagination and media delivery | Shopify Liquid, Section Rendering API and CDN |
-
-The components are independent of a store's name, but are **Dawn adapters**, not a theme-agnostic standalone product-card system. Before using them on a different theme, adapt and validate those dependencies. Test a Dawn upgrade separately; do not assume another Dawn version is automatically compatible.
-
-The agreed architecture uses a **shared card and one Product grid with optional editorial media**. Gallery and scrollbar activation are global, with regression checks for shared-card consumers. Complete independence from Dawn would require owning its price, badge, quick-add, facet and drawer contracts. That is not the present objective: this library deliberately extends Dawn and documents the dependencies.
-
-## Other modules and working method
-
-`editorial-push.liquid`, `editorial-dispatch.liquid` and `gift-options.liquid` are included. Editorial dispatch now supports automatic collection title/image/link with optional overrides. They are optional modules, not automatically activated by installing the grid. Their data and merchant settings remain in the shop.
-
-See [installation and host hooks](docs/installation.md), [development method](docs/development-method.md), [theme customization audit](docs/theme-audit-2026-11-19.md) and [Product Group Variants audit and recovered source](docs/product-group-variants.md). This public library is not a full client-theme backup. A private complete-theme repository is optional: Shopify plus exact draft backups and a record of installed component versions is a valid simpler workflow.
+The library also includes Product breadcrumbs, Editorial push, Editorial dispatch, Gift options and Product Group Variants. Install only the modules needed by the host. Their configuration and content remain in Shopify; see [installation](docs/installation.md).
 
 ## Validation
 
-Run `npm ci` then `npm test` (Node 18 or newer). The tests cover actual Liquid navigation/media resolution, breadcrumb priorities, touch/keyboard/range navigation, accidental link suppression, desktop/mobile filter serialization, obsolete filter responses, preservation of native image loading, duplicate pagination requests and the failure fallback.
+Run `npm ci` and `npm test` with Node 18 or newer. Behavioral tests cover Liquid media/navigation resolution, breadcrumb escaping, gallery controls and hover, filter serialization and request races, native image loading and pagination fallback.
 
-Also validate in an actual Shopify draft: desktop/mobile filter application and reset, drawer closing, counts, editorial product links, pagination across tile boundaries, image/video overrides, video pause, and gallery images. Responsive emulation and DOM tests do not replace a final physical iOS/Android swipe test.
+Follow [the v0.7 acceptance procedure](docs/validation-v7.md) on the actual draft at desktop and mobile widths. Browser viewport checks and simulated touch events do not replace physical-device testing. Real video playback requires a real hosted video.
 
-Shopify Theme Check can parse these component files. A complete dependency/translation check must be run after installation into the target theme; this repository intentionally does not duplicate Dawn's assets, snippets and locales.
-
-Sold-out merchandising rules are not implemented here. Shopify's native availability filter remains available where configured; changing collection-wide order or inventory inclusion is a separate decision.
-
-Global Layout supports a precise **Page width** number in pixels and **Enable full-width layout**. Product grid offers **Make products full width**, independently of the global width, using Featured collection’s native gutters. Apply the host patches described in the installation guide.
-
-## Navigation and card typography (v0.6)
-
-Select a dedicated **Navigation menu** under Product grid > Filtering and sorting. One horizontal row follows the selected collection; mobile scrolls horizontally. Product breadcrumbs use the same menu in a section at the start of the footer group, visible only on products. See [the navigation contract](docs/collection-navigation.md) and [v0.6 migration](docs/migration-v6.md).
-
-The shared card owns its product information styling: inherited font weight/style, one text size, full opacity, no tracking or inner text margins, and padding on `card__information`. Native layout/quick-add assets remain host dependencies. Remove superseded host custom CSS with the reviewed cleanup patch. Global grid spacing accepts zero, including mobile.
+Keep merchant settings, theme exports, credentials, screenshots and store-specific validation records outside this public library. Review upgrades in a separate draft; see [Dawn upgrades](docs/dawn-upgrades.md).

@@ -1,0 +1,11 @@
+--- a/layout/theme.liquid
++++ b/layout/theme.liquid
+@@ -296,6 +296,8 @@
+         document.documentElement.classList.add('shopify-design-mode');
+       }
+     </script>
++    {% comment %}Register gallery assets before asynchronous recommendation cards arrive.{% endcomment %}
++    {% render 'product-card-gallery', assets_only: true %}
+   </head>
+ 
+   <body class="gradient{% if settings.animations_hover_elements != 'none' %} animate--hover-{{ settings.animations_hover_elements }}{% endif %}">

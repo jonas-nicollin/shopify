@@ -3,6 +3,7 @@
   Pass product, lazy_load, desktop_columns, mobile_columns and gallery_id.
   Controls are siblings of the padded image gallery, so card padding never moves the carets inward.
 {%- endcomment -%}
+{% unless assets_only %}
 {% liquid
   assign images = product.metafields.custom.card_images.value | where: 'media_type', 'image'
   if images == blank
@@ -23,7 +24,7 @@
     <button type="button" data-step="1" aria-controls="{{ gallery_id }}" aria-label="{{ 'sections.slideshow.next_slideshow' | t | escape }}">{{ 'icon-caret.svg' | inline_asset_content }}</button>
   </div>
 {% endif %}
-<product-card-gallery id="{{ gallery_id }}" class="product-card-gallery">
+<product-card-gallery id="{{ gallery_id }}" class="product-card-gallery" data-secondary-hover="{{ show_secondary_image }}">
   <a class="product-card-gallery__link" href="{{ product.url }}" aria-label="{{ product.title | escape }}">
     {% for item in images limit: 3 %}
       {% assign photo = item.preview_image | default: item %}
@@ -44,6 +45,7 @@
     <input type="range" min="1" max="{{ count }}" step="1" value="1" aria-controls="{{ gallery_id }}" aria-label="{{ 'sections.slideshow.load_slide' | t | escape }}" aria-valuetext="1 / {{ count }}">
   </div>
 {% endif %}
+{% endunless %}
 {% stylesheet %}
 .card .card__inner .card__media:has(> .product-card-gallery) {margin:0;width:100%;z-index:2}
 .card__inner:has(.product-card-gallery) > .card__content {z-index:3;pointer-events:none}
@@ -95,7 +97,7 @@ if (!customElements.get('product-card-gallery')) {
       const templates=[...link.querySelectorAll('template')];
       link.querySelectorAll('img[data-extra-view]').forEach(image=>image.remove());
       const slides=[link.querySelector('img')],count=templates.length+1;
-      let current=0,version=0,start,suppressUntil=0;
+      let current=0,version=0,start,suppressUntil=0,hovered=false,previous=0;
       this.events=new AbortController();
       const on=(element,event,handler)=>element?.addEventListener(event,handler,{signal:this.events.signal});
       const reveal=()=>{
@@ -121,13 +123,20 @@ if (!customElements.get('product-card-gallery')) {
         slides.forEach((slide,i)=>{slide.classList.toggle('is-active',i===index);slide.classList.toggle('is-inactive',i!==index);slide.setAttribute('aria-hidden',String(i!==index));});
         if(range){range.value=String(index+1);range.setAttribute('aria-valuetext',`${index+1} / ${count}`);scrollbar.style.setProperty('--gallery-index',index);scrollbar.querySelectorAll('[data-gallery-step]').forEach((step,i)=>step.classList.toggle('is-active',i===index));}
       };
+      if(this.dataset.secondaryHover==='true'){
+        on(media,'pointerenter',event=>{
+          if(event.pointerType!=='mouse'||!matchMedia('(hover: hover) and (pointer: fine)').matches)return;
+          previous=current;hovered=true;show(1);
+        });
+        on(media,'pointerleave',()=>{if(hovered){hovered=false;show(previous);}});
+      }
       controls.hidden=false;
       if(scrollbar)scrollbar.hidden=false;
-      on(controls,'click',event=>{const button=event.target.closest('button');if(button)show(current+Number(button.dataset.step));});
-      on(range,'input',()=>show(Number(range.value)-1));
+      on(controls,'click',event=>{const button=event.target.closest('button');if(button){hovered=false;show(current+Number(button.dataset.step));}});
+      on(range,'input',()=>{hovered=false;show(Number(range.value)-1);});
       on(media,'keydown',event=>{
         if(event.target===range)return;
-        if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();show(current+(event.key==='ArrowRight'?1:-1));}
+        if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();hovered=false;show(current+(event.key==='ArrowRight'?1:-1));}
       });
       on(link,'pointerdown',event=>{
         if(event.pointerType==='mouse'||!event.isPrimary)return;
