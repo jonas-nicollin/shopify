@@ -631,3 +631,46 @@
     </div>
   </div>
 {%- endif -%}
+
+{%- unless skip_styles -%}
+{% style %}
+.product-card-wrapper .card .card__content {
+  padding: 0;
+  margin: 0;
+  opacity: 1;
+  color: rgb(var(--color-foreground));
+  font-family: inherit;
+  font-size: calc(var(--font-body-scale) * 1.2rem);
+  font-weight: inherit;
+  font-style: inherit;
+  letter-spacing: normal;
+}
+@media (min-width: 750px) {
+  .product-card-wrapper .card .card__content {font-size: calc(var(--font-body-scale) * 1.6rem)}
+}
+.product-card-wrapper .card .card__inner .card__content {padding: 0}
+.product-card-wrapper .card .card__content :is(.card__information, .card__badge) {
+  margin: 0;
+  opacity: 1;
+  font: inherit;
+  letter-spacing: normal;
+}
+.product-card-wrapper .card .card__content .card__information {
+  padding: 1.3rem 1rem;
+}
+@media (min-width: 750px) {
+  .product-card-wrapper .card .card__content .card__information {padding-block: 1.7rem}
+}
+.product-card-wrapper .card .card__content :is(.card__information, .card__badge) :not(.visually-hidden, .rating-star) {
+  margin: 0;
+  padding: 0;
+  opacity: 1;
+  font: inherit;
+  letter-spacing: normal;
+}
+.product-card-wrapper .card .card__content .card__information :not(.rating-star) {color: inherit}
+.product-card-wrapper .card .card__content .card__information .card-information > :not(.visually-hidden) {margin: 0}
+.product-card-wrapper .card .card__content .card__heading a {text-decoration: none}
+.product-card-wrapper .card .card__content .price--on-sale .price__sale {display: inline-flex;flex-wrap: wrap;gap: .4em}
+{% endstyle %}
+{%- endunless -%}

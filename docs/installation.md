@@ -6,6 +6,8 @@ Target: Dawn 15.2.0. This library is not a complete client theme. Install select
 | --- | --- | --- |
 | Shared product gallery | `snippets/card-product.liquid`, `product-card-gallery.liquid`, `media-aspect-ratio.liquid`, `product-badge-one-of-a-kind.liquid` | Merge the shared card with any host changes; add global settings below |
 | Product grid with optional editorial media | `sections/main-collection-product-grid.liquid` plus shared card modules | Replace the existing grid; follow the v0.5 template migration |
+| Contextual collection navigation | `snippets/collection-context.liquid`, `collection-path.liquid` | Select Navigation menu in Product grid; see the v0.6 migration |
+| Product breadcrumbs | `sections/product-breadcrumbs.liquid` and navigation snippets | First section in the footer group, same menu; renders only on products |
 | Product Group Variants | `snippets/product-group-variants.liquid` | Render from main-product's existing block case; retain its schema |
 | One of a kind badge | `snippets/product-badge-one-of-a-kind.liquid` | Shared card renders it in both native badge locations |
 | Header height | `assets/total-header-height-variable.js` | Load once in layout, after the body content |
@@ -21,6 +23,8 @@ Review the small diffs in `integrations/dawn/`; do not overwrite an entire host 
 - The full `sections/main-collection-product-grid.liquid` replaces the old native grid patch; `full_width` is included.
 - `main-product.patch`: replace the existing grouped-product block markup with its snippet render. Preserve the block schema and templates.
 - `base.patch`: remove the hard-coded page-width override and the two modules' old CSS only after their snippets are installed. Leave unrelated custom CSS unchanged.
+- `grid-spacing.patch`: lower the two existing grid spacing minima to zero.
+- `product-card-cleanup.patch`: remove obsolete custom card typography and fixed mobile grid gaps after updating the shared card. See [v0.6 migration](migration-v6.md).
 
 When migrating a shop already using `--page-width:100%`, set `page_full_width` to true before removing that override. Otherwise retain its previous bounded width. Merchant `settings_data.json` must never be copied from this public library. Existing `page_width`, block types, product-count ID and editor configuration remain intact.
 

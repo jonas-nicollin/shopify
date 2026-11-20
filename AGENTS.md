@@ -14,3 +14,4 @@
 - Prefer native browser image loading with HTML src/srcset. Keep page pagination distinct from media loading; avoid hiding a whole card while waiting for image decoding.
 - End user-facing delivery responses with remaining tasks in priority order.
 - Use theme color variables or configured color schemes for all new component UI; do not hard-code brand colors.
+- Do not introduce letter spacing unless explicitly requested. Product card information inherits the theme font, uses one text size, and keeps spacing on card__information rather than inner text margins.

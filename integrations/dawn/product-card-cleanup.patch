@@ -1,0 +1,80 @@
+--- a/assets/base.css
++++ b/assets/base.css
+@@ -18,2 +17,0 @@
+-  --grid-mobile-vertical-spacing: 2px;
+-  --grid-mobile-horizontal-spacing: 2px;
+@@ -61,61 +58,0 @@
+-/* ============================================================
+-   Card information
+-   ============================================================ */
+-
+-.card-information .price {
+-  letter-spacing: 0;
+-  font-size: calc(var(--font-heading-scale) * 1.2rem);
+-}
+-@media only screen and (min-width: 750px) {
+-    .card-information .price {
+-        font-size: calc(var(--font-heading-scale) * 1.6rem);
+-    }
+-}
+-
+-@media only screen and (max-width: 749px) {
+-  .card--standard.card--media .card__inner .card__content {
+-    padding: .5rem;
+-    line-height: 1;
+-  }
+-}
+-@media only screen and (max-width: 749px) {
+-  XXX.card--standard .card__inner .card__badge {
+-    transform: rotate(-90deg);
+-    transform-origin: left;
+-  }
+-}
+-
+-/*
+-body .card--standard>.card__content .card__information {
+-      padding-left: 1rem;
+-    padding-right: 1rem;
+-
+-}
+-.product-grid-container .page-width {
+-  padding: 0 1.5rem;
+- padding: 0 var(--grid-desktop-horizontal-spacing);
+-}
+- */
+-
+-
+-/* ============================================================
+-   One of a kind Badge + Badge
+-   ============================================================ */
+-
+-xxx.card .card__badge {
+-    align-self: flex-start;
+-    grid-row-start: 1;
+-    justify-self: flex-start;
+-}
+-
+-.card .card__badge .badge {
+-  font-size: 1rem;
+-  padding: .5rem 1rem;
+-}
+-@media only screen and (min-width: 750px) {
+-    .card .card__badge .badge {
+-      font-size: 1.2rem;
+-    }
+-}
+-
+-
+@@ -272,12 +208,0 @@
+-
+-/* Product cards */
+-@media only screen and (min-width: 750px) {
+-  .card__heading.h5 {
+-    font-size: calc(var(--font-heading-scale)* 1.6rem);
+-    }
+-}
+-
+-.product-card-wrapper.underline-links-hover .card__heading.h5 a {
+-  text-decoration: none;
+-  }
+-

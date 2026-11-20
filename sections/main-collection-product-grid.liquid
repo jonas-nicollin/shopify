@@ -12,8 +12,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 {{ 'template-collection.css' | asset_url | stylesheet_tag }}
 {{ 'component-card.css' | asset_url | stylesheet_tag }}
 {{ 'component-price.css' | asset_url | stylesheet_tag }}
-{% if section.settings.image_shape == 'blob' %}{{ 'mask-blobs.css' | asset_url | stylesheet_tag }}{% endif %}
-{% if section.settings.image_shape == 'arch' %}{{ 'mask-arch.svg' | inline_asset_content }}{% endif %}
 
 
 {%- unless section.settings.quick_add == 'none' -%}
@@ -47,6 +45,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 {%- endstyle -%}
 
 <product-catalog class="catalog-grid{% if section.settings.full_width %} catalog-grid--full-width{% endif %} section-{{ section.id }}-padding gradient color-{{ section.settings.color_scheme }}" data-section="{{ section.id }}" data-sticky="{{ section.settings.sticky_filters }}" data-count="{{ section.settings.show_product_count }}" data-pagination="{{ section.settings.enable_pagination }}" data-autoplay="{{ section.settings.editorial_video_autoplay }}" style="--catalog-mobile:{{ section.settings.columns_mobile }};--catalog-desktop:{{ section.settings.columns_desktop }};--catalog-span:{{ section.settings.columns_desktop | at_most: 2 }}">
+  {% render 'collection-context', menu: section.settings.navigation_menu, mode: 'navigation', current_collection: collection %}
   {%- paginate collection.products by section.settings.products_per_page -%}
     <div class="catalog-grid__layout{% if section.settings.filter_type == 'vertical' %} facets-vertical{% endif %} page-width">
       {{ 'component-facets.css' | asset_url | stylesheet_tag }}
@@ -96,8 +95,16 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                 {% if editorial %}
                   {% liquid
                     assign media = product.images[1] | default: product.featured_image
-                    assign override = product.metafields.custom.editorial_media.value
-                    assign override_media = override.media.value
+                    assign media_path = section.settings.editorial_media_path | strip | split: '.'
+                    assign override = nil
+                    assign override_media = nil
+                    if media_path.size == 2 or media_path.size == 3
+                      assign override = product.metafields[media_path[0]][media_path[1]].value
+                      assign override_media = override
+                      if media_path.size == 3
+                        assign override_media = override[media_path[2]].value
+                      endif
+                    endif
                     if override_media.media_type == 'image' or override_media.media_type == 'video'
                       assign media = override_media
                     endif
@@ -120,7 +127,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
                   {% endif %}
                 {% endif %}
                 <li class="grid__item" data-catalog-item data-product="{{ product.id }}">
-                  {% render 'card-product', card_product: product, media_aspect_ratio: section.settings.image_ratio, image_shape: section.settings.image_shape, show_secondary_image: secondary_hover, show_vendor: section.settings.show_vendor, show_rating: section.settings.show_rating, lazy_load: lazy_load, skip_styles: skip_card_product_styles, quick_add: section.settings.quick_add, section_id: section.id, desktop_columns: section.settings.columns_desktop, mobile_columns: section.settings.columns_mobile %}
+                  {% render 'card-product', card_product: product, media_aspect_ratio: section.settings.image_ratio, show_secondary_image: secondary_hover, show_vendor: section.settings.show_vendor, show_rating: section.settings.show_rating, lazy_load: lazy_load, skip_styles: skip_card_product_styles, quick_add: section.settings.quick_add, section_id: section.id, desktop_columns: section.settings.columns_desktop, mobile_columns: section.settings.columns_mobile %}
                 </li>
                 {% assign skip_card_product_styles = true %}
               {% endfor %}
@@ -452,47 +459,6 @@ if (!customElements.get('product-catalog')) {
       "label": "t:sections.main-collection-product-grid.settings.image_ratio.label"
     },
     {
-      "type": "select",
-      "id": "image_shape",
-      "options": [
-        {
-          "value": "default",
-          "label": "t:sections.all.image_shape.options__1.label"
-        },
-        {
-          "value": "arch",
-          "label": "t:sections.all.image_shape.options__2.label"
-        },
-        {
-          "value": "blob",
-          "label": "t:sections.all.image_shape.options__3.label"
-        },
-        {
-          "value": "chevronleft",
-          "label": "t:sections.all.image_shape.options__4.label"
-        },
-        {
-          "value": "chevronright",
-          "label": "t:sections.all.image_shape.options__5.label"
-        },
-        {
-          "value": "diamond",
-          "label": "t:sections.all.image_shape.options__6.label"
-        },
-        {
-          "value": "parallelogram",
-          "label": "t:sections.all.image_shape.options__7.label"
-        },
-        {
-          "value": "round",
-          "label": "t:sections.all.image_shape.options__8.label"
-        }
-      ],
-      "default": "default",
-      "label": "t:sections.all.image_shape.label",
-      "info": "t:sections.all.image_shape.info"
-    },
-    {
       "type": "checkbox",
       "id": "show_secondary_image",
       "default": false,
@@ -536,6 +502,12 @@ if (!customElements.get('product-catalog')) {
     {
       "type": "header",
       "content": "t:sections.main-collection-product-grid.settings.header__1.content"
+    },
+    {
+      "type": "link_list",
+      "id": "navigation_menu",
+      "label": "Navigation menu",
+      "info": "Shows the current collection and related collections on one line."
     },
     {
       "type": "checkbox",
@@ -654,6 +626,14 @@ if (!customElements.get('product-catalog')) {
       "id": "enable_editorial",
       "label": "Enable editorial media",
       "default": false
+    },
+    {
+      "type": "text",
+      "id": "editorial_media_path",
+      "label": "Product media field",
+      "default": "custom.editorial_media.media",
+      "info": "Image or video: custom.editorial_image. Metaobject: custom.editorial_media.media.",
+      "visible_if": "{{ section.settings.enable_editorial }}"
     },
     {
       "type": "range",

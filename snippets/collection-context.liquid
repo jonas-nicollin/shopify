@@ -1,0 +1,69 @@
+{% comment %}One menu powers one contextual navigation row and product breadcrumbs.{% endcomment %}
+{%- capture path -%}{% render 'collection-path', menu: menu, current_collection: current_collection, context_product: context_product %}{%- endcapture -%}
+{%- liquid
+  assign path = path | strip
+  assign parts = path | split: '|'
+  assign root_index = parts[0] | plus: 0
+  assign child_index = parts[1] | plus: 0
+  assign grandchild_index = parts[2] | plus: 0
+  assign root_link = menu.links[root_index]
+  assign child_link = nil
+  assign leaf_link = nil
+  if child_index >= 0
+    assign child_link = root_link.links[child_index]
+    if grandchild_index >= 0
+      assign leaf_link = child_link.links[grandchild_index]
+    endif
+  endif
+-%}
+{%- if mode == 'breadcrumbs' -%}
+  <nav class="collection-context collection-context--breadcrumbs page-width" aria-label="Breadcrumb">
+    <ol role="list">
+      <li><a href="{{ routes.root_url }}">{{ shop.name | escape }}</a></li>
+      {% if path != blank %}
+        <li><a href="{{ root_link.url | escape }}">{{ root_link.title | escape }}</a></li>
+        {% if child_link %}<li><a href="{{ child_link.url | escape }}">{{ child_link.title | escape }}</a></li>{% endif %}
+        {% if leaf_link %}<li><a href="{{ leaf_link.url | escape }}">{{ leaf_link.title | escape }}</a></li>{% endif %}
+      {% endif %}
+      <li aria-current="page">{{ context_product.title | escape }}</li>
+    </ol>
+  </nav>
+{%- elsif path != blank -%}
+  <div class="collection-context collection-context--navigation page-width">
+    <h2 class="collection-context__title">{{ root_link.title | escape }}</h2>
+    <nav aria-label="{{ root_link.title | escape }}">
+      <ul class="collection-context__links" role="list">
+        <li><a href="{{ root_link.url | escape }}"{% if child_index == -1 %} aria-current="page"{% endif %}>{{ view_all_label | default: 'View all' | escape }}</a></li>
+        {% for group in root_link.links %}
+          {% assign items = group | sort %}
+          {% if group.links.size > 0 %}{% assign items = group.links %}{% endif %}
+          {% for item in items %}
+            {% assign item_path = item.url | split: '?' | first | split: '#' | first %}
+            {% assign item_handle = item_path | split: '/' | last %}
+            <li><a href="{{ item.url | escape }}"{% if item_handle == current_collection.handle %} aria-current="page"{% endif %}>{{ item.title | escape }}</a></li>
+          {% endfor %}
+        {% endfor %}
+      </ul>
+    </nav>
+  </div>
+{%- endif -%}
+
+{% stylesheet %}
+.collection-context {color: rgb(var(--color-foreground));font: inherit;letter-spacing: normal}
+.collection-context.collection-context--navigation {padding-block: 2rem 3rem}
+@media (min-width: 750px) {.collection-context.collection-context--navigation {padding-block: 3rem 5rem}}
+.catalog-grid--full-width > .collection-context {max-width: none;padding-inline: 1.5rem}
+@media (min-width: 750px) and (max-width: 989px) {.catalog-grid--full-width > .collection-context {padding-inline: 5rem}}
+.collection-context .collection-context__title {margin: 0 0 2.4rem;font-size: calc(var(--font-heading-scale) * 2.8rem);font-weight: inherit;font-style: inherit;letter-spacing: normal}
+@media (min-width: 750px) {.collection-context .collection-context__title {margin-bottom: 3.2rem;font-size: calc(var(--font-heading-scale) * 3.6rem)}}
+.collection-context__links {display: flex;gap: 2.4rem;list-style: none;padding: 0;margin: 0;overflow-x: auto;overscroll-behavior-inline: contain;scrollbar-width: thin}
+.collection-context__links li {flex: 0 0 auto;margin: 0;padding: 0}
+.collection-context__links a {display: block;min-height: 44px;padding: .6rem 0 1.8rem;text-decoration: none;border-bottom: 1px solid transparent;color: rgba(var(--color-foreground),.65);font: inherit;letter-spacing: normal}
+.collection-context__links a:is(:hover,[aria-current="page"]) {color: rgb(var(--color-foreground));border-bottom-color: currentColor}
+.collection-context a:focus-visible {outline: 2px solid currentColor;outline-offset: -2px}
+.collection-context.collection-context--breadcrumbs {padding-block: 3rem}
+.collection-context--breadcrumbs ol {display: flex;flex-wrap: wrap;gap: .4rem .8rem;list-style: none;padding: 0;margin: 0}
+.collection-context--breadcrumbs li {display: inline;margin: 0;padding: 0}
+.collection-context--breadcrumbs li + li::before {content: '-';display: inline-block;margin-inline-end: .8rem}
+.collection-context--breadcrumbs a {color: inherit;text-underline-offset: .3rem}
+{% endstylesheet %}

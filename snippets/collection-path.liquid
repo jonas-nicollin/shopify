@@ -1,0 +1,48 @@
+{% comment %}
+Returns zero-based menu indexes (root|child|grandchild). A menu defines hierarchy;
+collection handles are used only to match resources, never to invent parents.
+For products: explicit custom.breadcrumb_collection, collection URL context,
+then the matching collection with the fewest products. Menu order breaks ties.
+{% endcomment %}
+{%- liquid
+  assign target = current_collection
+  if context_product != blank
+    assign target = context_product.metafields.custom.breadcrumb_collection.value | default: current_collection
+  endif
+  assign best_count = 999999999
+  assign exact_match = false
+  assign result = ''
+-%}
+{%- for root_link in menu.links -%}
+  {%- assign root_index = forloop.index0 -%}
+  {%- assign root_array = root_link | sort -%}
+  {%- assign children = root_array | concat: root_link.links -%}
+  {%- for child_link in children -%}
+    {%- assign child_index = forloop.index0 | minus: 1 -%}
+    {%- assign child_array = child_link | sort -%}
+    {%- if child_index == -1 -%}{%- assign candidates = child_array -%}{%- else -%}{%- assign candidates = child_array | concat: child_link.links -%}{%- endif -%}
+    {%- for candidate in candidates -%}
+      {%- liquid
+        assign grandchild_index = forloop.index0 | minus: 1
+        assign candidate_path = candidate.url | split: '?' | first | split: '#' | first
+        assign candidate_handle = candidate_path | split: '/' | last
+        assign match = false
+        if candidate_path contains '/collections/'
+          if target != blank and candidate_handle == target.handle and exact_match == false
+            assign match = true
+            assign exact_match = true
+          elsif context_product != blank and exact_match == false
+            for member in context_product.collections
+              if member.handle == candidate_handle and member.all_products_count < best_count
+                assign best_count = member.all_products_count
+                assign match = true
+              endif
+            endfor
+          endif
+        endif
+      -%}
+      {%- if match -%}{%- capture result -%}{{ root_index }}|{{ child_index }}|{{ grandchild_index }}{%- endcapture -%}{%- endif -%}
+    {%- endfor -%}
+  {%- endfor -%}
+{%- endfor -%}
+{{- result -}}

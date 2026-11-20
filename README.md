@@ -4,13 +4,15 @@ Reusable collection grid and product image gallery for **Dawn 15.2.0**. `main` c
 
 ## Installation
 
-Install these five files together into a draft theme, using the same paths. Review the existing shared card before replacing it, preserving any host customizations:
+Install these seven files together into a draft theme, using the same paths. Review the existing shared card before replacing it, preserving any host customizations:
 
 - `sections/main-collection-product-grid.liquid`
 - `snippets/product-card-gallery.liquid`
 - `snippets/card-product.liquid`
 - `snippets/media-aspect-ratio.liquid`
 - `snippets/product-badge-one-of-a-kind.liquid`
+- `snippets/collection-context.liquid`
+- `snippets/collection-path.liquid`
 
 Update the existing **Product grid**. Enable editorial media only where wanted. For former editorial sections, follow [the v0.5 migration](docs/migration-v5.md). Keep one collection grid active. Changes to a template affect every collection assigned to that template. Do not publish the draft before reviewing the storefront.
 
@@ -22,7 +24,7 @@ The default interval is **16 products**: insert a media tile immediately before 
 
 Media priority:
 
-1. The product's optional metaobject reference, described below, if its `media` field is an image or a Shopify-hosted video.
+1. The product field selected in **Product media field**, if it resolves to an image or a Shopify-hosted video.
 2. The product's second image.
 3. Its featured image when no second image exists.
 
@@ -39,11 +41,11 @@ Create a metaobject definition `editorial_media`:
 
 Create the product metafield `custom.editorial_media`, type **one metaobject reference**, restricted to that definition. Make the entries available to the storefront and set them **Active**. Select an entry from the product's **Editorial media** field. An empty reference automatically restores the product-image fallback.
 
-The reusable connector uses the stable keys above. Nonstandard shop mappings must be reviewed during installation, not exposed as everyday design options. Definitions and entries belong to the shop and are not transferred by copying theme files.
+In **Product grid > Editorial media > Product media field**, enter one path: `custom.editorial_image` for a direct file reference, or `custom.editorial_media.media` for the metaobject setup above (the default). The namespace, product key and optional metaobject field are combined in one control. Empty, malformed or unsupported fields fall back to product images. A collection section dynamic source cannot select a different product metafield for every iteration of its product loop. Definitions and entries belong to the shop and are not transferred by copying theme files.
 
 Videos load near the viewport, play muted and inline, loop, and pause outside the viewport. A visible play/pause control remains available. Autoplay can be disabled in section settings and is suppressed for `prefers-reduced-motion`. External YouTube/Vimeo URLs are not accepted by this version.
 
-The former collection-level `custom.editorial_tiles` mechanism is replaced by product-driven media. The unused `editorial_image` setting was removed in November 2026. Native image-shape support is retained in the consolidated Product grid. Old template JSON may still contain these unused keys until Shopify saves it; no product or media files are deleted. Shape support remains in the shared Dawn card for other sections.
+The former collection-level `custom.editorial_tiles` mechanism is replaced by product-driven media. The unused `editorial_image` setting was removed in November 2026. Image shape was removed from Product grid at the merchant’s request in v0.6. Old template JSON may still contain these unused keys until Shopify saves it; no product or media files are deleted. Shape support remains in the shared Dawn card for other sections.
 
 ## Loading, filters and gallery
 
@@ -85,7 +87,7 @@ See [installation and host hooks](docs/installation.md), [development method](do
 
 ## Validation
 
-Run `npm ci` then `npm test` (Node 18 or newer). The tests cover touch/keyboard/range navigation, accidental link suppression, desktop/mobile filter serialization, obsolete filter responses, preservation of native image loading, duplicate pagination requests and the failure fallback.
+Run `npm ci` then `npm test` (Node 18 or newer). The tests cover actual Liquid navigation/media resolution, breadcrumb priorities, touch/keyboard/range navigation, accidental link suppression, desktop/mobile filter serialization, obsolete filter responses, preservation of native image loading, duplicate pagination requests and the failure fallback.
 
 Also validate in an actual Shopify draft: desktop/mobile filter application and reset, drawer closing, counts, editorial product links, pagination across tile boundaries, image/video overrides, video pause, and gallery images. Responsive emulation and DOM tests do not replace a final physical iOS/Android swipe test.
 
@@ -94,3 +96,9 @@ Shopify Theme Check can parse these component files. A complete dependency/trans
 Sold-out merchandising rules are not implemented here. Shopify's native availability filter remains available where configured; changing collection-wide order or inventory inclusion is a separate decision.
 
 Global Layout supports a precise **Page width** number in pixels and **Enable full-width layout**. Product grid offers **Make products full width**, independently of the global width, using Featured collection’s native gutters. Apply the host patches described in the installation guide.
+
+## Navigation and card typography (v0.6)
+
+Select a dedicated **Navigation menu** under Product grid > Filtering and sorting. One horizontal row follows the selected collection; mobile scrolls horizontally. Product breadcrumbs use the same menu in a section at the start of the footer group, visible only on products. See [the navigation contract](docs/collection-navigation.md) and [v0.6 migration](docs/migration-v6.md).
+
+The shared card owns its product information styling: inherited font weight/style, one text size, full opacity, no tracking or inner text margins, and padding on `card__information`. Native layout/quick-add assets remain host dependencies. Remove superseded host custom CSS with the reviewed cleanup patch. Global grid spacing accepts zero, including mobile.

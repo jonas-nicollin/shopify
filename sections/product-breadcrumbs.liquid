@@ -1,0 +1,21 @@
+{% if request.page_type == 'product' %}
+  <div class="product-breadcrumbs color-{{ section.settings.color_scheme }} gradient">
+    {% render 'collection-context', menu: section.settings.navigation_menu, mode: 'breadcrumbs', context_product: product, current_collection: collection %}
+  </div>
+{% endif %}
+
+{% stylesheet %}
+.product-breadcrumbs {border-block: 1px solid rgba(var(--color-foreground),.15)}
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Product breadcrumbs",
+  "enabled_on": {"groups": ["footer"], "templates": ["product"]},
+  "settings": [
+    {"type": "link_list", "id": "navigation_menu", "label": "Navigation menu", "info": "Use the same menu as Product grid."},
+    {"type": "color_scheme", "id": "color_scheme", "label": "t:sections.all.colors.label", "default": "scheme-1"}
+  ],
+  "presets": [{"name": "Product breadcrumbs"}]
+}
+{% endschema %}
